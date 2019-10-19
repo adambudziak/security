@@ -2,7 +2,6 @@ use anyhow::Result;
 
 use serde_json::json;
 
-use std::collections::HashMap;
 use mcl::bn::*;
 
 use proto::constants::*;
@@ -37,7 +36,7 @@ fn get_challenge(response: InitSchnorr) -> Fr {
 }
 
 async fn prove_schnorr(id: &uuid::Uuid, proof: &Fr) -> Result<()> {
-    let body = serde_json::to_string(
+    let body = serde_json::to_value(
         &GenericSchemeBody {
             protocol_name: Protocol::Sis,
             session_token: id.clone(),
@@ -45,16 +44,7 @@ async fn prove_schnorr(id: &uuid::Uuid, proof: &Fr) -> Result<()> {
                 proof: proof.clone(),
             }
         }
-    );
-    let body = json!({
-        "protocol_name": "sis",
-        "session_token": id.to_string(),
-        "payload": {
-            "proof": to_base64(proof),
-        }
-    });
-
-    println!("{}", body);
+    ).unwrap();
 
     let client = reqwest::Client::new();
     let resp = client.post("http://localhost:8000/protocols/sis/verify")
@@ -64,7 +54,9 @@ async fn prove_schnorr(id: &uuid::Uuid, proof: &Fr) -> Result<()> {
 
     resp.error_for_status_ref()?;
 
-    println!("{}", resp.text().await?);
+    let resp: std::collections::HashMap<String, bool> = resp.json().await?;
+
+    assert!(resp.get("result").unwrap(), "The verification for SIS failed!");
 
     Ok(())
 }

@@ -11,31 +11,31 @@ pub mod schnorr {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct InitParams {
-        #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
+        #[serde(with="serde_base64")]
         pub commitment: G1,
-        #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
+        #[serde(with="serde_base64")]
         pub pubkey: G1,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ProofParams {
-        #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
+        #[serde(with="serde_base64")]
         pub proof: Fr,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ChallengeParams {
-        #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
+        #[serde(with="serde_base64")]
         pub challenge: Fr,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Session {
-        #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
+        #[serde(with="serde_base64")]
         pub challenge: Fr,
-        #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
+        #[serde(with="serde_base64")]
         pub commitment: G1,
-        #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
+        #[serde(with="serde_base64")]
         pub pubkey: G1,
     }
 
