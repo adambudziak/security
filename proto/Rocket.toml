@@ -1,0 +1,5 @@
+[development]
+log = "debug"
+
+[global.databases.session_db]
+url = "redis://localhost:55432"
