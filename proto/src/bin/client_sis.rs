@@ -60,7 +60,7 @@ async fn prove_schnorr(id: &uuid::Uuid, proof: &Fr) -> Result<()> {
 
     let resp: std::collections::HashMap<String, bool> = resp.json().await?;
 
-    assert!(resp.get("result").unwrap(), "The verification for SIS failed!");
+    assert!(resp.get("verified").unwrap(), "The verification for SIS failed!");
 
     Ok(())
 }
