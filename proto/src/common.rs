@@ -63,8 +63,11 @@ pub mod serde_mcl_default {
         D: Deserializer<'de>,
         T: Formattable + Default,
     {
-        let raw_str = Deserialize::deserialize(deserializer)?;
-        from_mcl_default(raw_str).map_err(|_| D::Error::custom("Couldn't deserialize from raw string"))
+        let mut raw_str: String = Deserialize::deserialize(deserializer)?;
+        if raw_str.contains(' ') {
+            raw_str = "1 ".to_string() + &raw_str.clone();
+        }
+        from_mcl_default(&raw_str).map_err(|_| D::Error::custom("Couldn't deserialize from raw string"))
     }
 
     pub fn serialize<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
@@ -74,7 +77,11 @@ pub mod serde_mcl_default {
         S::Error: SerError
     {
         let serialized = to_mcl_default(t);
-        s.serialize_str(&serialized)
+        if &serialized[..2] == "1 " {
+            s.serialize_str(&serialized[2..])
+        } else {
+            s.serialize_str(&serialized)
+        }
     }
 }
 

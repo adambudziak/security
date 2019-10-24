@@ -11,21 +11,21 @@ pub mod schnorr {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct InitParams {
-        #[serde(with="serde_mcl_default")]
+        #[serde(with="serde_mcl_default", rename="X")]
         pub commitment: G1,
-        #[serde(with="serde_mcl_default")]
+        #[serde(with="serde_mcl_default", rename="A")]
         pub pubkey: G1,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ProofParams {
-        #[serde(with="serde_mcl_default")]
+        #[serde(with="serde_mcl_default", rename="s")]
         pub proof: Fr,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ChallengeParams {
-        #[serde(with="serde_mcl_default")]
+        #[serde(with="serde_mcl_default", rename="c")]
         pub challenge: Fr,
     }
 
