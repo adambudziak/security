@@ -11,13 +11,17 @@ use proto::protocols::*;
 type InitSchnorr = GenericSchemeBody<schnorr::ChallengeParams>;
 
 async fn init_schnorr(pubkey: &G1, commitment: &G1) -> Result<InitSchnorr> {
-    let body = json!({
-        "protocol_name": "sis",
-        "payload": {
-            "pubkey": to_base64(pubkey),
-            "commitment": to_base64(commitment),
+    let body = serde_json::to_value(
+        &InitSchemeBody {
+            protocol_name: Protocol::Sis,
+            payload: schnorr::InitParams {
+                pubkey: pubkey.clone(),
+                commitment: commitment.clone()
+            }
         }
-    });
+    ).unwrap();
+
+    println!("{:#?}", body);
 
     let client = reqwest::Client::new();
     let resp = client.post("http://localhost:8000/protocols/sis/init")

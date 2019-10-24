@@ -11,31 +11,31 @@ pub mod schnorr {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct InitParams {
-        #[serde(with="serde_base64")]
+        #[serde(with="serde_mcl_default")]
         pub commitment: G1,
-        #[serde(with="serde_base64")]
+        #[serde(with="serde_mcl_default")]
         pub pubkey: G1,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ProofParams {
-        #[serde(with="serde_base64")]
+        #[serde(with="serde_mcl_default")]
         pub proof: Fr,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ChallengeParams {
-        #[serde(with="serde_base64")]
+        #[serde(with="serde_mcl_default")]
         pub challenge: Fr,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Session {
-        #[serde(with="serde_base64")]
+        #[serde(with="serde_mcl_default")]
         pub challenge: Fr,
-        #[serde(with="serde_base64")]
+        #[serde(with="serde_mcl_default")]
         pub commitment: G1,
-        #[serde(with="serde_base64")]
+        #[serde(with="serde_mcl_default")]
         pub pubkey: G1,
     }
 

@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Serialize, Deserialize};
 
-use mcl::traits::RawSerializable;
+use mcl::traits::{RawSerializable, Formattable};
 use crate::protocols::Protocol;
 
 pub mod serde_base64 {
@@ -12,8 +12,6 @@ pub mod serde_base64 {
     use serde::{
         Deserialize,
         de::{
-            value::BorrowedBytesDeserializer,
-            DeserializeOwned,
             Deserializer,
             Error,
         },
@@ -26,11 +24,10 @@ pub mod serde_base64 {
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
     where
         D: Deserializer<'de>,
-        T: DeserializeOwned,
+        T: RawSerializable + Default,
     {
         let base64_str: &str = Deserialize::deserialize(deserializer)?;
-        let bytes = base64::decode(base64_str).map_err(D::Error::custom)?;
-        T::deserialize(BorrowedBytesDeserializer::<D::Error>::new(&bytes))
+        from_base64(base64_str).map_err(|_| D::Error::custom("Couldn't deserialize MCL object from base64"))
     }
 
 
@@ -45,6 +42,50 @@ pub mod serde_base64 {
         s.serialize_str(&base64_str)
     }
 
+}
+
+pub mod serde_mcl_default {
+    use super::*;
+
+    use serde::{
+        de::{
+            Deserializer,
+            Error as DeError,
+        },
+        ser::{
+            Serializer,
+            Error as SerError,
+        }
+    };
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: Formattable + Default,
+    {
+        let raw_str = Deserialize::deserialize(deserializer)?;
+        from_mcl_default(raw_str).map_err(|_| D::Error::custom("Couldn't deserialize from raw string"))
+    }
+
+    pub fn serialize<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
+    where
+        T: Formattable + ?Sized,
+        S: Serializer,
+        S::Error: SerError
+    {
+        let serialized = to_mcl_default(t);
+        s.serialize_str(&serialized)
+    }
+}
+
+pub fn to_mcl_default<T: Formattable + ?Sized>(t: &T) -> String {
+    t.get_str(mcl::common::Base::Dec)
+}
+
+pub fn from_mcl_default<T: Formattable + Default>(raw_str: &str) -> Result<T, ()> {
+    let mut result = T::default();
+    result.set_str(raw_str, mcl::common::Base::Dec);
+    Ok(result)
 }
 
 pub fn from_base64<T: RawSerializable + Default>(base64_str: &str) -> Result<T, ()> {
