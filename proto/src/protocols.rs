@@ -54,26 +54,20 @@ pub mod schnorr {
         Session {
             commitment: init.commitment.clone(),
             pubkey: init.pubkey.clone(),
-            challenge: challenge.clone()
+            challenge: *challenge
         }
     }
 }
 
 pub mod okamoto {
 
-    use mcl::bn::{Fr, G1};
+    use mcl::bn::Fr;
 
     use super::*;
 
     use crate::{common::*, constants::*};
 
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct InitParams {
-        #[serde(with="serde_mcl_default", rename="X")]
-        pub commitment: G1,
-        #[serde(with="serde_mcl_default", rename="A")]
-        pub pubkey: G1,
-    }
+    pub type InitParams = super::schnorr::InitParams;
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ProofParams {
@@ -83,21 +77,9 @@ pub mod okamoto {
         pub proof2: Fr,
     }
 
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct ChallengeParams {
-        #[serde(with="serde_mcl_default", rename="c")]
-        pub challenge: Fr,
-    }
+    pub type ChallengeParams = super::schnorr::ChallengeParams;
 
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct Session {
-        #[serde(with="serde_mcl_default")]
-        pub challenge: Fr,
-        #[serde(with="serde_mcl_default")]
-        pub commitment: G1,
-        #[serde(with="serde_mcl_default")]
-        pub pubkey: G1,
-    }
+    pub type Session = super::schnorr::Session;
 
     pub fn init(_params: &InitParams) -> ChallengeParams {
         ChallengeParams { challenge: Fr::from_csprng() }
@@ -117,7 +99,7 @@ pub mod okamoto {
         Session {
             commitment: init.commitment.clone(),
             pubkey: init.pubkey.clone(),
-            challenge: challenge.clone()
+            challenge: *challenge
         }
     }
 }

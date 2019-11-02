@@ -1,57 +1,47 @@
 use anyhow::Result;
 
-use serde_json::json;
-
 use mcl::bn::*;
 
-use proto::constants::*;
 use proto::common::*;
+use proto::constants::*;
 use proto::protocols::*;
 
-type InitSchnorr = GenericSchemeBody<schnorr::ChallengeParams>;
+type SchnorrChallenge = GenericResponse<schnorr::ChallengeParams>;
 
-async fn init_schnorr(pubkey: &G1, commitment: &G1) -> Result<InitSchnorr> {
-    let body = serde_json::to_value(
-        &InitSchemeBody {
-            protocol_name: Protocol::Sis,
-            payload: schnorr::InitParams {
-                pubkey: pubkey.clone(),
-                commitment: commitment.clone()
-            }
-        }
-    ).unwrap();
-
-    println!("{:#?}", body);
+async fn init_schnorr(pubkey: &G1, commitment: &G1) -> Result<SchnorrChallenge> {
+    let body = serde_json::to_value(&InitSchemeBody {
+        protocol_name: Protocol::Sis,
+        payload: schnorr::InitParams {
+            pubkey: pubkey.clone(),
+            commitment: commitment.clone(),
+        },
+    })
+    .unwrap();
 
     let client = reqwest::Client::new();
-    let resp = client.post("http://localhost:8000/protocols/sis/init")
+    let resp = client
+        .post(&format!("{}/protocols/sis/init", SERVER))
         .json(&body)
         .send()
         .await?;
 
     resp.error_for_status_ref()?;
 
-    let response: InitSchnorr = serde_json::from_str(&resp.text().await?).unwrap();
+    let response: SchnorrChallenge = serde_json::from_str(&resp.text().await?).unwrap();
     Ok(response)
 }
 
-fn get_challenge(response: InitSchnorr) -> Fr {
-    response.payload.challenge
-}
-
-async fn prove_schnorr(id: &uuid::Uuid, proof: &Fr) -> Result<()> {
-    let body = serde_json::to_value(
-        &GenericSchemeBody {
-            protocol_name: Protocol::Sis,
-            session_token: id.clone(),
-            payload: schnorr::ProofParams {
-                proof: proof.clone(),
-            }
-        }
-    ).unwrap();
+async fn prove_schnorr(session_token: String, proof: Fr) -> Result<()> {
+    let body = serde_json::to_value(&GenericSchemeBody {
+        protocol_name: Protocol::Sis,
+        session_token,
+        payload: schnorr::ProofParams { proof },
+    })
+    .unwrap();
 
     let client = reqwest::Client::new();
-    let resp = client.post("http://localhost:8000/protocols/sis/verify")
+    let resp = client
+        .post(&format!("{}/protocols/sis/verify", SERVER))
         .json(&body)
         .send()
         .await?;
@@ -60,11 +50,13 @@ async fn prove_schnorr(id: &uuid::Uuid, proof: &Fr) -> Result<()> {
 
     let resp: std::collections::HashMap<String, bool> = resp.json().await?;
 
-    assert!(resp.get("verified").unwrap(), "The verification for SIS failed!");
+    assert!(
+        resp.get("verified").unwrap(),
+        "The verification for SIS failed!"
+    );
 
     Ok(())
 }
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -77,11 +69,10 @@ async fn main() -> Result<()> {
 
     let priv_comm = Fr::from_csprng();
     let commitment = &g1 * priv_comm;
-    
     let response = init_schnorr(&public_key, &commitment).await?;
-    let token = response.session_token.clone();
-    let challenge = get_challenge(response);
+    let token = response.session_token;
+    let challenge = response.payload.challenge;
     let proof = priv_comm + secret_key * challenge;
-    prove_schnorr(&token, &proof).await?;
+    prove_schnorr(token, proof).await?;
     Ok(())
 }

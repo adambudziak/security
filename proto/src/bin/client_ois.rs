@@ -1,14 +1,12 @@
 use anyhow::Result;
 
-use serde_json::json;
-
 use mcl::bn::*;
 
 use proto::constants::*;
 use proto::common::*;
 use proto::protocols::*;
 
-type InitSchnorr = GenericSchemeBody<okamoto::ChallengeParams>;
+type InitSchnorr = GenericResponse<okamoto::ChallengeParams>;
 
 async fn init_okamoto(pubkey: &G1, commitment: &G1) -> Result<InitSchnorr> {
     let body = serde_json::to_value(
@@ -20,9 +18,10 @@ async fn init_okamoto(pubkey: &G1, commitment: &G1) -> Result<InitSchnorr> {
             }
         }
     ).unwrap();
+    let server = get_servers()["rafal_r"].to_string();
 
     let client = reqwest::Client::new();
-    let resp = client.post("http://localhost:8000/protocols/ois/init")
+    let resp = client.post(&format!("{}/protocols/ois/init", server))
         .json(&body)
         .send()
         .await?;
@@ -33,24 +32,23 @@ async fn init_okamoto(pubkey: &G1, commitment: &G1) -> Result<InitSchnorr> {
     Ok(response)
 }
 
-fn get_challenge(response: InitSchnorr) -> Fr {
-    response.payload.challenge
-}
-
-async fn prove_okamoto(id: &uuid::Uuid, proof1: &Fr, proof2: &Fr) -> Result<()> {
+async fn prove_okamoto(session_token: String, proof1: Fr, proof2: Fr) -> Result<()> {
     let body = serde_json::to_value(
         &GenericSchemeBody {
             protocol_name: Protocol::Ois,
-            session_token: id.clone(),
+            session_token,
             payload: okamoto::ProofParams {
-                proof1: proof1.clone(),
-                proof2: proof2.clone(),
+                proof1,
+                proof2,
             }
         }
     ).unwrap();
 
+    let server = get_servers()["rafal_r"].to_string();
+    println!("{}", server);
+
     let client = reqwest::Client::new();
-    let resp = client.post("http://localhost:8000/protocols/ois/verify")
+    let resp = client.post(&format!("{}/protocols/ois/verify", server))
         .json(&body)
         .send()
         .await?;
@@ -74,17 +72,17 @@ async fn main() -> Result<()> {
 
     let secret_key1 = Fr::from_csprng();
     let secret_key2 = Fr::from_csprng();
-    let public_key = &g1 * secret_key1 + &g2 * &secret_key2;
+    let public_key = &g1 * secret_key1 + &g2 * secret_key2;
 
     let priv_comm1 = Fr::from_csprng();
     let priv_comm2 = Fr::from_csprng();
     let commitment = &g1 * priv_comm1 + &g2 * priv_comm2;
     
     let response = init_okamoto(&public_key, &commitment).await?;
-    let token = response.session_token.clone();
-    let challenge = get_challenge(response);
-    let proof1 = priv_comm1 + secret_key1 * &challenge;
-    let proof2 = priv_comm2 + secret_key2 * &challenge;
-    prove_okamoto(&token, &proof1, &proof2).await?;
+    let token = response.session_token;
+    let challenge = response.payload.challenge;
+    let proof1 = priv_comm1 + secret_key1 * challenge;
+    let proof2 = priv_comm2 + secret_key2 * challenge;
+    prove_okamoto(token, proof1, proof2).await?;
     Ok(())
 }

@@ -1,5 +1,8 @@
 [development]
 log = "debug"
+port = 42080
+address = "0.0.0.0"
+
 
 [global.databases.session_db]
 url = "redis://localhost:55432"

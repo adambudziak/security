@@ -1,7 +1,11 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate rocket_contrib;
+
+use rocket::response::status::NotFound;
 
 use rocket_contrib::databases::redis::{self, Commands};
 use rocket_contrib::json::{Json, JsonValue};
@@ -12,11 +16,9 @@ use proto::protocols::*;
 #[database("session_db")]
 struct SessionDbConn(redis::Connection);
 
-#[get("/")]
+#[get("/protocols")]
 fn index() -> JsonValue {
-    json!({
-        "sis": "/protocols/sis"
-    })
+    json!(["sis", "ois"])
 }
 
 macro_rules! generate_is3_endpoint {
@@ -30,17 +32,21 @@ macro_rules! generate_is3_endpoint {
             let id = uuid::Uuid::new_v4();
             let challenge = $module::init(&params.payload);
 
-            let _: () = conn.set(
+            conn.set::<_, _, ()>(
                 id.to_string(),
-                serde_json::to_string(
-                    &$module::create_session(&params.payload, &challenge.challenge)
-                ).unwrap()
-            ).unwrap();
+                serde_json::to_string(&$module::create_session(
+                    &params.payload,
+                    &challenge.challenge,
+                ))
+                .unwrap(),
+            )
+            .unwrap();
 
-            let response = GenericSchemeBody {
-                session_token: id,
-                protocol_name: Protocol::Sis,
-                payload: challenge
+            conn.expire::<_, ()>(id.to_string(), 30).unwrap();
+
+            let response = GenericResponse {
+                session_token: id.to_string(),
+                payload: challenge,
             };
             serde_json::to_value(&response).unwrap().into()
         }
@@ -49,21 +55,23 @@ macro_rules! generate_is3_endpoint {
         fn $verify_module(
             params: Json<GenericSchemeBody<$module::ProofParams>>,
             conn: SessionDbConn,
-        ) -> JsonValue {
-
+        ) -> Result<JsonValue, NotFound<String>> {
             let params = params.into_inner();
 
-            // TODO
-            let session: String = conn.get(params.session_token.to_string()).unwrap();
+            let id = params.session_token;
+
+            let session: String = conn.get(&id).map_err(|_| {
+                NotFound(format!("The session for {} doesn't exist or expired", id))
+            })?;
+
+            conn.del::<_, ()>(&id).unwrap();
             let session: $module::Session = serde_json::from_str(&session).unwrap();
 
             let verified = $module::verify(&session, &params.payload);
 
-            json!({
-                "verified": verified
-            })
+            Ok(json!({ "verified": verified }))
         }
-    }
+    };
 }
 
 generate_is3_endpoint![schnorr, init_schnorr, verify_schnorr];

@@ -112,7 +112,7 @@ where
     T: Debug,
 {
     pub protocol_name: Protocol,
-    pub session_token: uuid::Uuid,
+    pub session_token: String,
     pub payload: T,
 }
 
@@ -126,3 +126,11 @@ where
     pub payload: T,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericResponse<T>
+where
+    T: Debug
+{
+    pub session_token: String,
+    pub payload: T,
+}
