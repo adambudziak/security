@@ -33,15 +33,18 @@ def test(p_index, password):
     return result, res == 1
 
 
+def print_clients():
+    s.send(index.to_bytes(4, 'little'), 4)
+    clients = int.from_bytes(s.recv(4), 'little')
+    print('Connected clients: ', clients)
+
+
 def main():
     global s
     s = init_socket()
 
     index = 229747
-
-    s.send(index.to_bytes(4, 'little'), 4)
-    clients = int.from_bytes(s.recv(4), 'little')
-    print('Connected clients: ', clients)
+    print_clients()
 
     s.send(bytes(range(9)))
     print(test(0, bytes(range(8))))
