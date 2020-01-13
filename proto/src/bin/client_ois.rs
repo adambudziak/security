@@ -15,10 +15,10 @@ async fn init_okamoto(pubkey: &G1, commitment: &G1) -> Result<InitSchnorr> {
             payload: okamoto::InitParams {
                 pubkey: pubkey.clone(),
                 commitment: commitment.clone()
-            }
+                }
         }
     ).unwrap();
-    let server = get_servers()["rafal_r"].to_string();
+    let server = get_server("adam_b");
 
     let client = reqwest::Client::new();
     let resp = client.post(&format!("{}/protocols/ois/init", server))
@@ -44,8 +44,8 @@ async fn prove_okamoto(session_token: String, proof1: Fr, proof2: Fr) -> Result<
         }
     ).unwrap();
 
-    let server = get_servers()["rafal_r"].to_string();
-    println!("{}", server);
+    let server = get_server("adam_b");
+
 
     let client = reqwest::Client::new();
     let resp = client.post(&format!("{}/protocols/ois/verify", server))

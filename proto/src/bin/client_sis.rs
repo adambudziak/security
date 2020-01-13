@@ -17,10 +17,9 @@ async fn init_schnorr(pubkey: &G1, commitment: &G1) -> Result<SchnorrChallenge> 
         },
     })
     .unwrap();
-
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/protocols/sis/init", SERVER))
+        .post(&format!("{}/protocols/sis/init", get_server("adam_b")))
         .json(&body)
         .send()
         .await?;
@@ -41,7 +40,7 @@ async fn prove_schnorr(session_token: String, proof: Fr) -> Result<()> {
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/protocols/sis/verify", SERVER))
+        .post(&format!("{}/protocols/sis/verify", get_server("adam_b")))
         .json(&body)
         .send()
         .await?;

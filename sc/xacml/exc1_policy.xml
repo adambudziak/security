@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Policy
+  xmlns="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17"
+  xmlns:xacml="urn:oasis:names:tc:xacml:3.0:core:schema:wd-17"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xf="http://www.w3.org/2005/xpath-functions"
+  xmlns:md="http:www.med.example.com/schemas/record.xsd"
+  PolicyId="exercise1"
+  Version="1.0"
+  RuleCombiningAlgId="urn:oasis:names:tc:xacml:1.0:rule-combining-algorithm:deny-unless-permit">
+    <Description>
+        Policy granting access to at most two distinct databases to a single user.
+    </Description>
+    <Target/>
+    <VariableDefinition VariableId="can_access_db">
+        <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:or">
+            <Apply
+                FunctionId="urn:oasis:names:tc:xacml:1.0:function:integer-less-than">       
+                <Apply FunctionId="urn:oasis:names:tc:xacml:x.x:function:type-bag-size">
+                    <AttributeDesignator
+                        MustBePresent="false"
+                        Category="urn:oasis:names:tc:xacml:1.0:subject-category:access-subject"
+                        AttributeId="urn:oasis:names:tc:xacml:3.0:exercise:attribute:accessed-dbs"
+                        DataType="http://www.w3.org/2001/XMLSchema#string"/>
+                </Apply>
+                <AttributeValue DataType="http://www.w3.org/2001/XMLSchema#integer">
+                    2
+                </AttributeValue>
+            </Apply>
+            <Apply FunctionId="urn:oasis:names:tc:xacml:x.x:function:type-is-in">
+                <Apply FunctionId="urn:oasis:names:tc:xacml:1.0:function:string-one-and-only">
+                    <AttributeDesignator
+                        MustBePresent="false"
+                        Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource"
+                        AttributeId="urn:oasis:names:tc:xacml:2.0:resource:target-id"
+                        DataType="http://www.w3.org/2001/XMLSchema#string"/>
+                </Apply>
+                <AttributeDesignator
+                    MustBePresent="false"
+                    Category="urn:oasis:names:tc:xacml:1.0:subject-category:access-subject"
+                    AttributeId="urn:oasis:names:tc:xacml:3.0:exercise:attribute:accessed-dbs"
+                    DataType="http://www.w3.org/2001/XMLSchema#string"/>
+            </Apply>
+        </Apply>
+    </VariableDefinition>
+    <Rule
+        RuleId="urn:oasis:names:tc:xacml:3.0:example:ruleid:2"
+        Effect="Permit">
+        <Target>
+            <AnyOf>
+                <AllOf>
+                    <Match
+                        MatchId="urn:oasis:names:tc:xacml:1.0:function:rfc822Name-match">
+                        <AttributeValue
+                            DataType="http://www.w3.org/2001/XMLSchema#string">
+                            Database_A
+                        </AttributeValue>
+                        <AttributeDesignator
+                            MustBePresent="false"
+                            Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource"
+                            AttributeId="urn:oasis:names:tc:xacml:2.0:resource:target-id"/>
+                    </Match>
+                </AllOf>
+            </AnyOf>
+        </Target>
+        <Condition>
+            <VariableReference VariableId="can_access_db"/>
+        </Condition>
+    </Rule>
+    <Rule
+        RuleId="urn:oasis:names:tc:xacml:3.0:example:ruleid:1"
+        Effect="Permit">
+        <Target>
+            <AnyOf>
+                <AllOf>
+                    <Match
+                        MatchId="urn:oasis:names:tc:xacml:1.0:function:rfc822Name-match">
+                        <AttributeValue
+                            DataType="http://www.w3.org/2001/XMLSchema#string">
+                            Database_R
+                        </AttributeValue>
+                        <AttributeDesignator
+                            MustBePresent="false"
+                            Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource"
+                            AttributeId="urn:oasis:names:tc:xacml:2.0:resource:target-id"/>
+                    </Match>
+                </AllOf>
+            </AnyOf>
+        </Target>
+        <Condition>
+            <VariableReference VariableId="can_access_db"/>
+        </Condition>
+    </Rule>
+    <Rule
+        RuleId="urn:oasis:names:tc:xacml:3.0:example:ruleid:3"
+        Effect="Permit">
+        <Target>
+            <AnyOf>
+                <AllOf>
+                    <Match
+                        MatchId="urn:oasis:names:tc:xacml:1.0:function:rfc822Name-match">
+                        <AttributeValue
+                            DataType="http://www.w3.org/2001/XMLSchema#string">
+                            Database_G
+                        </AttributeValue>
+                        <AttributeDesignator
+                            MustBePresent="false"
+                            Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource"
+                            AttributeId="urn:oasis:names:tc:xacml:2.0:resource:target-id"/>
+                    </Match>
+                </AllOf>
+            </AnyOf>
+        </Target>
+        <Condition>
+            <VariableReference VariableId="can_access_db"/>
+        </Condition>
+    </Rule>
+    <ObligationExpressions>
+        <ObligationExpression
+            ObligationId="exercise:names:obligation:db_g"
+            FulfillOn="Permit">
+            <AttributeAssignmentExpression
+                Category="urn:oasis:names:tc:xacml:1.0:subject-category:access-subject"
+                AttributeId="urn:oasis:names:tc:xacml:3.0:exercise:attribute:accessed-dbs"
+            >
+                <Apply
+                    FunctionId="urn:oasis:names:tc:xacml:x.x:function:type-union">
+                    <AttributeSelector
+                        MustBePresent="false"
+                        Category="urn:oasis:names:tc:xacml:1.0:subject-category:access-subject"
+                        AttributeId="urn:oasis:names:tc:xacml:3.0:exercise:attribute:accessed-dbs"
+                        DataType="http://www.w3.org/2001/XMLSchema#string"
+                    />
+                    <AttributeDesignator
+                        MustBePresent="false"
+                        Category="urn:oasis:names:tc:xacml:3.0:attribute-category:resource"
+                        AttributeId="urn:oasis:names:tc:xacml:2.0:resource:target-id"/>
+                </Apply>
+            </AttributeAssignmentExpression>
+        </ObligationExpression>
+    </ObligationExpressions>
+</Policy>

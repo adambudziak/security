@@ -1,0 +1,6 @@
+version: "3.7"
+services:
+  db:
+    image: redis:4.0
+    ports:
+      - 55432:6379
