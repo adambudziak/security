@@ -144,11 +144,69 @@ pub mod okamoto {
     }
 }
 
+pub mod mod_schnorr {
+
+    use mcl::bn::{Fr, G1, G2, GT};
+    use mcl::traits::RawSerializable;
+
+    use super::*;
+
+    use crate::{common::*, constants::*};
+    use sha3::{Digest, Sha3_256};
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct Session {
+        #[serde(with="serde_mcl_default")]
+        pub challenge: Fr,
+        #[serde(with="serde_mcl_default")]
+        pub commitment: G1,
+        #[serde(with="serde_mcl_default")]
+        pub pubkey: G1,
+    }
+
+    pub type InitParams = schnorr::InitParams;
+    pub type ChallengeParams = schnorr::ChallengeParams;
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct ProofParams {
+        #[serde(with="serde_mcl_default", rename="s")]
+        pub proof: G2,
+    }
+
+    pub fn init(_params: &InitParams) -> ChallengeParams {
+        ChallengeParams { challenge: Fr::from_csprng() }
+    }
+
+    pub fn verify(session: &Session, proof: &ProofParams) -> bool {
+        let g1 = default_g1();
+        let g_hat = G2::hash_and_map(&compute_hash(&session.commitment, &session.challenge)).unwrap();
+        let e1 = GT::from_pairing(&g1, &proof.proof);
+        let e2 = GT::from_pairing(&(&session.commitment + &session.pubkey * &session.challenge), &g_hat);
+        e1 == e2
+    }
+
+    pub fn compute_hash(commitment: &G1, challenge: &Fr) -> Vec<u8> {
+        let hasher = Sha3_256::new()
+            .chain(commitment.serialize_raw().unwrap())
+            .chain(challenge.serialize_raw().unwrap());
+        hasher.result().as_slice().to_vec()
+    }
+
+    pub fn create_session(init: &InitParams, challenge: &Fr) -> Session {
+        Session {
+            commitment: init.commitment.clone(),
+            pubkey: init.pubkey.clone(),
+            challenge: *challenge
+        }
+    }
+}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Protocol {
     Sis,
     Ois,
-    Sss
+    Sss,
+    Msis
 }

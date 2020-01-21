@@ -12,12 +12,12 @@ use rocket_contrib::json::{Json, JsonValue};
 use proto::common::*;
 use proto::protocols::*;
 
-use proto::server::{sis, ois, sss};
+use proto::server::{sis, ois, sss, msis};
 use proto::server::common::SessionDbConn;
 
 #[get("/protocols")]
 fn index() -> JsonValue {
-    json!(["sis", "ois", "sss"])
+    json!(["sis", "ois", "sss", "msis"])
 }
 
 
@@ -61,6 +61,23 @@ pub fn verify_sss(
     sss::verify_sss(params.into_inner().payload)
 }
 
+#[post("/init", format = "json", data = "<params>")]
+fn init_mod_schnorr(
+    params: Json<InitSchemeBody<mod_schnorr::InitParams>>,
+    conn: SessionDbConn,
+) -> JsonValue {
+    msis::init_mod_schnorr(params, conn)
+}
+
+#[post("/verify", format = "json", data = "<params>")]
+pub fn verify_mod_schnorr(
+    params: Json<GenericSchemeBody<mod_schnorr::ProofParams>>,
+    conn: SessionDbConn,
+) -> Result<JsonValue, NotFound<String>> {
+    msis::verify_mod_schnorr(params, conn)
+}
+
+
 
 fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
@@ -70,6 +87,7 @@ fn main() {
         .mount("/protocols/sis", routes![init_schnorr, verify_schnorr])
         .mount("/protocols/ois", routes![init_okamoto, verify_okamoto])
         .mount("/protocols/sss", routes![verify_sss])
+        .mount("/protocols/msis", routes![init_mod_schnorr, verify_mod_schnorr])
         .attach(SessionDbConn::fairing())
         .launch();
 }
