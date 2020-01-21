@@ -185,6 +185,7 @@ pub mod mod_schnorr {
         e1 == e2
     }
 
+    // TODO this hash should be computed differently
     pub fn compute_hash(commitment: &G1, challenge: &Fr) -> Vec<u8> {
         let hasher = Sha3_256::new()
             .chain(commitment.serialize_raw().unwrap())
@@ -201,6 +202,48 @@ pub mod mod_schnorr {
     }
 }
 
+pub mod bls_ss {
+
+    use mcl::bn::{Fr, G1, G2, GT};
+    use mcl::traits::Formattable;
+
+    use super::*;
+
+    use crate::{common::*, constants::*};
+    use sha3::{Digest, Sha3_256};
+
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct VerifyParams {
+        #[serde(with="serde_mcl_default", rename="s")]
+        pub signature: G2,
+        #[serde(with="serde_mcl_default", rename="A")]
+        pub pubkey: G1,
+        #[serde(rename="msg")]
+        pub message: String,
+    }
+
+    pub fn sign(priv_key: &Fr, message: String) -> VerifyParams {
+        let g1 = default_g1();
+        let g2 = G2::hash_and_map(message.as_bytes()).unwrap();
+        let signature = g2 * priv_key;
+
+        VerifyParams {
+            signature: signature,
+            pubkey: &g1 * priv_key,
+            message: message,
+        }
+    }
+
+    pub fn verify_signature(params: &VerifyParams) -> bool {
+        let g1 = default_g1();
+        let g2 = G2::hash_and_map(params.message.as_bytes()).unwrap();
+        let e1 = GT::from_pairing(&g1, &params.signature);
+        let e2 = GT::from_pairing(&params.pubkey, &g2);
+        e1 == e2
+    }
+}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -208,5 +251,6 @@ pub enum Protocol {
     Sis,
     Ois,
     Sss,
-    Msis
+    Msis,
+    Blsss
 }

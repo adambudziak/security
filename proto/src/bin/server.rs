@@ -12,7 +12,7 @@ use rocket_contrib::json::{Json, JsonValue};
 use proto::common::*;
 use proto::protocols::*;
 
-use proto::server::{sis, ois, sss, msis};
+use proto::server::{sis, ois, sss, msis, blsss};
 use proto::server::common::SessionDbConn;
 
 #[get("/protocols")]
@@ -78,6 +78,13 @@ pub fn verify_mod_schnorr(
 }
 
 
+#[post("/verify", format = "json", data ="<params>")]
+pub fn verify_blsss(
+    params: Json<InitSchemeBody<bls_ss::VerifyParams>>,
+) -> JsonValue {
+    blsss::verify_blsss(params.into_inner().payload)
+}
+
 
 fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
@@ -88,6 +95,7 @@ fn main() {
         .mount("/protocols/ois", routes![init_okamoto, verify_okamoto])
         .mount("/protocols/sss", routes![verify_sss])
         .mount("/protocols/msis", routes![init_mod_schnorr, verify_mod_schnorr])
+        .mount("/protocols/blsss", routes![verify_blsss])
         .attach(SessionDbConn::fairing())
         .launch();
 }
