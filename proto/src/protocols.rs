@@ -4,10 +4,12 @@ use serde::{Serialize, Deserialize};
 pub mod schnorr {
 
     use mcl::bn::{Fr, G1};
+    use mcl::traits::Formattable;
 
     use super::*;
 
     use crate::{common::*, constants::*};
+    use sha3::{Digest, Sha3_256};
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct InitParams {
@@ -27,6 +29,18 @@ pub mod schnorr {
     pub struct ChallengeParams {
         #[serde(with="serde_mcl_default", rename="c")]
         pub challenge: Fr,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct VerifyParams {
+        #[serde(with="serde_mcl_default", rename="s")]
+        pub signature: Fr,
+        #[serde(with="serde_mcl_default", rename="X")]
+        pub commitment: G1,
+        #[serde(with="serde_mcl_default", rename="A")]
+        pub pubkey: G1,
+        #[serde(rename="msg")]
+        pub message: String,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -56,6 +70,32 @@ pub mod schnorr {
             pubkey: init.pubkey.clone(),
             challenge: *challenge
         }
+    }
+
+    pub fn sign(priv_key: &Fr, message: String) -> VerifyParams {
+        let g1: G1 = default_g1();
+        let _commitment = Fr::from_csprng();
+        let commitment = &g1 * _commitment;
+        println!("{:?}", compute_hash(&commitment, &message).len());
+        let challenge: Fr = from_bytes(&compute_hash(&commitment, &message)).unwrap();
+        VerifyParams {
+            signature: _commitment + priv_key * challenge,
+            commitment: commitment,
+            pubkey: &g1 * priv_key,
+            message: message,
+        }
+    }
+
+    pub fn verify_signature(params: &VerifyParams) -> bool {
+        let challenge: Fr = from_bytes(&compute_hash(&params.commitment, &params.message)).unwrap();
+        let generator = default_g1();
+        generator * params.signature == &params.commitment + &params.pubkey * challenge
+    }
+
+    pub fn compute_hash(commitment: &G1, message: &str) -> Vec<u8> {
+        let hasher = Sha3_256::new().chain(message.as_bytes())
+              .chain(commitment.get_str(mcl::common::Base::Dec));
+        hasher.result().as_slice().to_vec()
     }
 }
 
@@ -104,9 +144,11 @@ pub mod okamoto {
     }
 }
 
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Protocol {
     Sis,
     Ois,
+    Sss
 }

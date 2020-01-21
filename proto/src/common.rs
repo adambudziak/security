@@ -106,6 +106,17 @@ pub fn to_base64<T: RawSerializable + ?Sized>(t: &T) -> String {
     base64::encode(&t.serialize_raw().unwrap())
 }
 
+pub fn from_bytes<T: Formattable + RawSerializable + Default>(bytes: &[u8]) -> Result<T, ()> {
+    let mut result = T::default();
+    let _num_bytes = result.deserialize_raw(bytes);
+    // TODO possibly a bug in the rust mcl wrapper (returns 0 even though deserialization was successful)
+    // if num_bytes.is_err() {
+    //     eprintln!("Deserialization of the value went wrong!");
+    //     return Err(());
+    // }
+    Ok(result)
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenericSchemeBody<T>
 where

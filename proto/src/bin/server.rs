@@ -12,12 +12,12 @@ use rocket_contrib::json::{Json, JsonValue};
 use proto::common::*;
 use proto::protocols::*;
 
-use proto::server::{sis, ois};
+use proto::server::{sis, ois, sss};
 use proto::server::common::SessionDbConn;
 
 #[get("/protocols")]
 fn index() -> JsonValue {
-    json!(["sis", "ois"])
+    json!(["sis", "ois", "sss"])
 }
 
 
@@ -54,6 +54,13 @@ pub fn verify_okamoto(
     ois::verify_okamoto(params, conn)
 }
 
+#[post("/verify", format = "json", data ="<params>")]
+pub fn verify_sss(
+    params: Json<InitSchemeBody<schnorr::VerifyParams>>,
+) -> JsonValue {
+    sss::verify_sss(params.into_inner().payload)
+}
+
 
 fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
@@ -62,6 +69,7 @@ fn main() {
         .mount("/", routes![index])
         .mount("/protocols/sis", routes![init_schnorr, verify_schnorr])
         .mount("/protocols/ois", routes![init_okamoto, verify_okamoto])
+        .mount("/protocols/sss", routes![verify_sss])
         .attach(SessionDbConn::fairing())
         .launch();
 }
