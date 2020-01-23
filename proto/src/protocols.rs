@@ -219,7 +219,7 @@ pub mod bls_ss {
     use mcl::bn::{Fr, G1, G2, GT};
 
     use crate::{common::*, constants::*};
-    use sha3::{Digest, Sha3_256};
+    
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct VerifyParams {

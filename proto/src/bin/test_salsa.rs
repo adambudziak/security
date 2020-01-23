@@ -6,11 +6,7 @@ use anyhow::Result;
 use sodiumoxide::crypto::secretbox::xsalsa20poly1305::{
     Key,
     gen_nonce,
-    open,
-    seal
 };
-
-use proto::common::*;
 use proto::constants::*;
 
 #[tokio::main]

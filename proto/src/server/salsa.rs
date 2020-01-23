@@ -36,7 +36,7 @@ fn get_nonce(buf: &[u8]) -> Result<Nonce> {
 impl FromDataSimple for SalsaDigest {
     type Error = String;
 
-    fn from_data(req: &Request, data: Data) -> Outcome<Self, Self::Error> {
+    fn from_data(_req: &Request, data: Data) -> Outcome<Self, Self::Error> {
         // let person_ct = ContentType::new("application", "x-person");
         // if req.content_type() != Some(&person_ct) {
         //     return Outcome::Forward(data);

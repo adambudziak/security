@@ -35,7 +35,7 @@ async fn init_exchange(commitment: &G1) -> Result<GenericResponse<ExchangeInit>>
     Ok(response)
 }
 
-fn verify_exchange_init(init: &ExchangeInit) {}
+fn verify_exchange_init(_init: &ExchangeInit) {}
 
 async fn finalize_exchange(token: String, finish: &ExchangeFinish) -> Result<String> {
     let body = serde_json::to_value(&GenericSchemeBody {
