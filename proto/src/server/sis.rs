@@ -3,11 +3,9 @@ use rocket::response::status::NotFound;
 use rocket_contrib::databases::redis::Commands;
 use rocket_contrib::json::{Json, JsonValue};
 
-
-use crate::server::common::SessionDbConn;
-use crate::common::{InitSchemeBody, GenericResponse, GenericSchemeBody};
+use crate::common::{GenericResponse, GenericSchemeBody, InitSchemeBody};
 use crate::protocols::schnorr;
-
+use crate::server::common::SessionDbConn;
 
 pub fn init_schnorr(
     params: Json<InitSchemeBody<schnorr::InitParams>>,
@@ -36,7 +34,6 @@ pub fn init_schnorr(
     serde_json::to_value(&response).unwrap().into()
 }
 
-
 pub fn verify_schnorr(
     params: Json<GenericSchemeBody<schnorr::ProofParams>>,
     conn: SessionDbConn,
@@ -45,9 +42,9 @@ pub fn verify_schnorr(
 
     let id = params.session_token;
 
-    let session: String = conn.get(&id).map_err(|_| {
-        NotFound(format!("The session for {} doesn't exist or expired", id))
-    })?;
+    let session: String = conn
+        .get(&id)
+        .map_err(|_| NotFound(format!("The session for {} doesn't exist or expired", id)))?;
 
     conn.del::<_, ()>(&id).unwrap();
     let session: schnorr::Session = serde_json::from_str(&session).unwrap();

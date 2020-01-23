@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use serde::{Serialize, Deserialize};
 
 pub mod schnorr {
 
@@ -13,48 +13,50 @@ pub mod schnorr {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct InitParams {
-        #[serde(with="serde_mcl_default", rename="X")]
+        #[serde(with = "serde_mcl_default", rename = "X")]
         pub commitment: G1,
-        #[serde(with="serde_mcl_default", rename="A")]
+        #[serde(with = "serde_mcl_default", rename = "A")]
         pub pubkey: G1,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ProofParams {
-        #[serde(with="serde_mcl_default", rename="s")]
+        #[serde(with = "serde_mcl_default", rename = "s")]
         pub proof: Fr,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ChallengeParams {
-        #[serde(with="serde_mcl_default", rename="c")]
+        #[serde(with = "serde_mcl_default", rename = "c")]
         pub challenge: Fr,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct VerifyParams {
-        #[serde(with="serde_mcl_default", rename="s")]
+        #[serde(with = "serde_mcl_default", rename = "s")]
         pub signature: Fr,
-        #[serde(with="serde_mcl_default", rename="X")]
+        #[serde(with = "serde_mcl_default", rename = "X")]
         pub commitment: G1,
-        #[serde(with="serde_mcl_default", rename="A")]
+        #[serde(with = "serde_mcl_default", rename = "A")]
         pub pubkey: G1,
-        #[serde(rename="msg")]
+        #[serde(rename = "msg")]
         pub message: String,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Session {
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub challenge: Fr,
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub commitment: G1,
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub pubkey: G1,
     }
 
     pub fn init(_params: &InitParams) -> ChallengeParams {
-        ChallengeParams { challenge: Fr::from_csprng() }
+        ChallengeParams {
+            challenge: Fr::from_csprng(),
+        }
     }
 
     pub fn verify(session: &Session, proof: &ProofParams) -> bool {
@@ -68,7 +70,7 @@ pub mod schnorr {
         Session {
             commitment: init.commitment.clone(),
             pubkey: init.pubkey.clone(),
-            challenge: *challenge
+            challenge: *challenge,
         }
     }
 
@@ -112,9 +114,9 @@ pub mod okamoto {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ProofParams {
-        #[serde(with="serde_mcl_default", rename="s1")]
+        #[serde(with = "serde_mcl_default", rename = "s1")]
         pub proof1: Fr,
-        #[serde(with="serde_mcl_default", rename="s2")]
+        #[serde(with = "serde_mcl_default", rename = "s2")]
         pub proof2: Fr,
     }
 
@@ -123,7 +125,9 @@ pub mod okamoto {
     pub type Session = super::schnorr::Session;
 
     pub fn init(_params: &InitParams) -> ChallengeParams {
-        ChallengeParams { challenge: Fr::from_csprng() }
+        ChallengeParams {
+            challenge: Fr::from_csprng(),
+        }
     }
 
     pub fn verify(session: &Session, proof: &ProofParams) -> bool {
@@ -140,7 +144,7 @@ pub mod okamoto {
         Session {
             commitment: init.commitment.clone(),
             pubkey: init.pubkey.clone(),
-            challenge: *challenge
+            challenge: *challenge,
         }
     }
 }
@@ -157,11 +161,11 @@ pub mod mod_schnorr {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Session {
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub challenge: Fr,
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub commitment: G1,
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub pubkey: G1,
     }
 
@@ -170,19 +174,25 @@ pub mod mod_schnorr {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ProofParams {
-        #[serde(with="serde_mcl_default", rename="s")]
+        #[serde(with = "serde_mcl_default", rename = "s")]
         pub proof: G2,
     }
 
     pub fn init(_params: &InitParams) -> ChallengeParams {
-        ChallengeParams { challenge: Fr::from_csprng() }
+        ChallengeParams {
+            challenge: Fr::from_csprng(),
+        }
     }
 
     pub fn verify(session: &Session, proof: &ProofParams) -> bool {
         let g1 = default_g1();
-        let g_hat = G2::hash_and_map(&compute_hash(&session.commitment, &session.challenge)).unwrap();
+        let g_hat =
+            G2::hash_and_map(&compute_hash(&session.commitment, &session.challenge)).unwrap();
         let e1 = GT::from_pairing(&g1, &proof.proof);
-        let e2 = GT::from_pairing(&(&session.commitment + &session.pubkey * &session.challenge), &g_hat);
+        let e2 = GT::from_pairing(
+            &(&session.commitment + &session.pubkey * &session.challenge),
+            &g_hat,
+        );
         e1 == e2
     }
 
@@ -198,27 +208,26 @@ pub mod mod_schnorr {
         Session {
             commitment: init.commitment.clone(),
             pubkey: init.pubkey.clone(),
-            challenge: *challenge
+            challenge: *challenge,
         }
     }
 }
 
 pub mod bls_ss {
 
-    use mcl::bn::{Fr, G1, G2, GT};
     use super::*;
+    use mcl::bn::{Fr, G1, G2, GT};
 
     use crate::{common::*, constants::*};
     use sha3::{Digest, Sha3_256};
 
-
     #[derive(Debug, Serialize, Deserialize)]
     pub struct VerifyParams {
-        #[serde(with="serde_mcl_default", rename="s")]
+        #[serde(with = "serde_mcl_default", rename = "s")]
         pub signature: G2,
-        #[serde(with="serde_mcl_default", rename="A")]
+        #[serde(with = "serde_mcl_default", rename = "A")]
         pub pubkey: G1,
-        #[serde(rename="msg")]
+        #[serde(rename = "msg")]
         pub message: String,
     }
 
@@ -249,22 +258,22 @@ pub mod sigma_ake {
     use super::*;
 
     use crate::{common::*, constants::*};
-    use sha3::{Digest, Sha3_256};
-    use crypto::poly1305::Poly1305;
     use crypto::mac::Mac;
+    use crypto::poly1305::Poly1305;
+    use sha3::{Digest, Sha3_256};
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct InitParams {
-        #[serde(with="serde_mcl_default", rename="X")]
+        #[serde(with = "serde_mcl_default", rename = "X")]
         pub client_commitment: G1,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ExchangeInit {
         pub b_mac: String,
-        #[serde(with="serde_mcl_default", rename="B")]
+        #[serde(with = "serde_mcl_default", rename = "B")]
         pub server_public_key: G1,
-        #[serde(with="serde_mcl_default", rename="Y")]
+        #[serde(with = "serde_mcl_default", rename = "Y")]
         pub server_commitment: G1,
         pub sig: schnorr::VerifyParams,
     }
@@ -272,7 +281,7 @@ pub mod sigma_ake {
     #[derive(Debug, Serialize, Deserialize)]
     pub struct ExchangeFinish {
         pub a_mac: String,
-        #[serde(with="serde_mcl_default", rename="A")]
+        #[serde(with = "serde_mcl_default", rename = "A")]
         pub client_public_key: G1,
         pub sig: schnorr::VerifyParams,
         pub msg: String,
@@ -280,11 +289,11 @@ pub mod sigma_ake {
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct Session {
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub client_commitment: G1,
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub secret_key: Fr,
-        #[serde(with="serde_mcl_default")]
+        #[serde(with = "serde_mcl_default")]
         pub g_xy: G1,
     }
 
@@ -292,7 +301,7 @@ pub mod sigma_ake {
         Session {
             client_commitment: init.client_commitment.clone(),
             secret_key: secret_key.clone(),
-            g_xy: g_xy.clone()
+            g_xy: g_xy.clone(),
         }
     }
 
@@ -301,14 +310,17 @@ pub mod sigma_ake {
         client_secret: &Fr,
         exchange_init: ExchangeInit,
         msg: String,
-    ) -> ExchangeFinish
-    {
+    ) -> ExchangeFinish {
         let g1 = default_g1();
         let public_key = &g1 * secret_key;
         let client_commitment = &g1 * client_secret;
         let g_xy = &exchange_init.server_commitment * client_secret;
         let a_mac = compute_mac(&g_xy, &public_key);
-        let sig = sign_commitments(secret_key, &exchange_init.server_commitment, &client_commitment);
+        let sig = sign_commitments(
+            secret_key,
+            &exchange_init.server_commitment,
+            &client_commitment,
+        );
         ExchangeFinish {
             a_mac: base64::encode(&a_mac),
             client_public_key: public_key,
@@ -318,30 +330,29 @@ pub mod sigma_ake {
     }
 
     pub fn get_session_key(g_xy: &G1) -> Vec<u8> {
-        let hasher = Sha3_256::new()
-            .chain("session_")
-            .chain(to_string(g_xy));
+        let hasher = Sha3_256::new().chain("session_").chain(to_string(g_xy));
         hasher.result().as_slice().to_vec()
     }
 
     pub fn compute_mac(mac_key_gen: &G1, digest: &G1) -> Vec<u8> {
         let generator_string = to_string(mac_key_gen);
-        let hasher = Sha3_256::new()
-            .chain("mac_")
-            .chain(generator_string);
+        let hasher = Sha3_256::new().chain("mac_").chain(generator_string);
         let mac_key = hasher.result().as_slice().to_vec();
         let mut mac = Poly1305::new(mac_key.as_slice());
         mac.input(&to_string(digest).as_bytes());
         mac.result().code().to_vec()
     }
 
-    pub fn sign_commitments(secret_key: &Fr, generator_a: &G1, generator_b: &G1) -> schnorr::VerifyParams {
+    pub fn sign_commitments(
+        secret_key: &Fr,
+        generator_a: &G1,
+        generator_b: &G1,
+    ) -> schnorr::VerifyParams {
         let mut message = to_string(generator_a);
         message.push_str(&to_string(generator_b));
         super::schnorr::sign(secret_key, message)
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -351,5 +362,5 @@ pub enum Protocol {
     Sss,
     Msis,
     Blsss,
-    Sigma
+    Sigma,
 }

@@ -1,15 +1,18 @@
 use anyhow::Result;
 
-use std::collections::HashMap;
 use mcl::bn::*;
 use proto::common::*;
 use proto::constants::*;
-use proto::protocols::{Protocol, schnorr::{VerifyParams, sign}};
+use proto::protocols::{
+    schnorr::{sign, VerifyParams},
+    Protocol,
+};
+use std::collections::HashMap;
 
 async fn verify_signature(verify_params: VerifyParams) -> Result<bool> {
     let body = serde_json::to_value(&InitSchemeBody {
         protocol_name: Protocol::Sss,
-        payload: verify_params
+        payload: verify_params,
     })
     .unwrap();
     let client = reqwest::Client::new();

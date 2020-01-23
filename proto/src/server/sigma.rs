@@ -1,17 +1,16 @@
-use crate::protocols::sigma_ake::{
-    InitParams, ExchangeInit, ExchangeFinish, create_session, Session,
-    compute_mac, sign_commitments, get_session_key
-};
 use crate::protocols::schnorr::verify_signature;
+use crate::protocols::sigma_ake::{
+    compute_mac, create_session, get_session_key, sign_commitments, ExchangeFinish, ExchangeInit,
+    InitParams, Session,
+};
 
 use rocket::response::status::NotFound;
-
 
 use rocket_contrib::databases::redis::Commands;
 use rocket_contrib::json::{Json, JsonValue};
 
+use crate::common::{GenericResponse, GenericSchemeBody, InitSchemeBody};
 use crate::server::common::SessionDbConn;
-use crate::common::{InitSchemeBody, GenericSchemeBody, GenericResponse};
 
 use mcl::bn::Fr;
 
@@ -19,10 +18,9 @@ use crate::constants::default_g1;
 
 use sha3::{Digest, Sha3_512};
 
-
 pub fn init_sigma(params: Json<InitSchemeBody<InitParams>>, conn: SessionDbConn) -> JsonValue {
     let params = params.into_inner();
-    
+
     let g1 = default_g1();
     let secret_key = Fr::from_csprng();
     let public_key = &g1 * &secret_key;
@@ -32,30 +30,21 @@ pub fn init_sigma(params: Json<InitSchemeBody<InitParams>>, conn: SessionDbConn)
 
     let g_xy = client_commitment * &_server_commitment;
 
-    
     let b_mac = compute_mac(&g_xy, &public_key);
-    let sig = sign_commitments(
-        &secret_key,
-        client_commitment,
-        &server_commitment);
+    let sig = sign_commitments(&secret_key, client_commitment, &server_commitment);
 
     let exchange_init = ExchangeInit {
         b_mac: base64::encode(&b_mac),
         server_public_key: public_key,
         server_commitment: server_commitment.clone(),
-        sig: sig
+        sig: sig,
     };
 
     let id = uuid::Uuid::new_v4();
 
     conn.set::<_, _, ()>(
         id.to_string(),
-        serde_json::to_string(&create_session(
-            &params.payload,
-            &secret_key,
-            &g_xy,
-        ))
-        .unwrap(),
+        serde_json::to_string(&create_session(&params.payload, &secret_key, &g_xy)).unwrap(),
     )
     .unwrap();
 
@@ -68,7 +57,6 @@ pub fn init_sigma(params: Json<InitSchemeBody<InitParams>>, conn: SessionDbConn)
     serde_json::to_value(&response).unwrap().into()
 }
 
-
 pub fn exchange_sigma(
     params: Json<GenericSchemeBody<ExchangeFinish>>,
     conn: SessionDbConn,
@@ -78,13 +66,13 @@ pub fn exchange_sigma(
 
     let id = params.session_token;
 
-    let session: String = conn.get(&id).map_err(|_| {
-        NotFound(format!("The session for {} doesn't exist or expired", id))
-    })?;
+    let session: String = conn
+        .get(&id)
+        .map_err(|_| NotFound(format!("The session for {} doesn't exist or expired", id)))?;
 
     conn.del::<_, ()>(&id).unwrap();
     let session: Session = serde_json::from_str(&session).unwrap();
-    
+
     let g_xy = session.g_xy;
     let expected_mac = compute_mac(&g_xy, &exchange_finish.client_public_key);
     let expected_mac = base64::encode(&expected_mac);
@@ -104,5 +92,5 @@ pub fn exchange_sigma(
 
     let response = base64::encode(hasher.result().as_slice());
 
-    Ok(json!({"msg": response}))
+    Ok(json!({ "msg": response }))
 }

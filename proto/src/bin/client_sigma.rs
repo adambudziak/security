@@ -1,22 +1,23 @@
 use anyhow::Result;
 
 use mcl::bn::*;
-use proto::protocols::{
-    Protocol,
-    sigma_ake::{InitParams, ExchangeInit, ExchangeFinish, compute_mac, sign_commitments, get_session_key}
-};
 use proto::common::*;
 use proto::constants::*;
+use proto::protocols::{
+    sigma_ake::{
+        compute_mac, get_session_key, sign_commitments, ExchangeFinish, ExchangeInit, InitParams,
+    },
+    Protocol,
+};
 
 use sha3::{Digest, Sha3_512};
-
 
 async fn init_exchange(commitment: &G1) -> Result<GenericResponse<ExchangeInit>> {
     let body = serde_json::to_value(&InitSchemeBody {
         protocol_name: Protocol::Sigma,
         payload: InitParams {
             client_commitment: commitment.clone(),
-        }
+        },
     })
     .unwrap();
 
@@ -29,28 +30,27 @@ async fn init_exchange(commitment: &G1) -> Result<GenericResponse<ExchangeInit>>
 
     resp.error_for_status_ref()?;
 
-    let response: GenericResponse<ExchangeInit> = serde_json::from_str(&resp.text().await?).unwrap();
+    let response: GenericResponse<ExchangeInit> =
+        serde_json::from_str(&resp.text().await?).unwrap();
     Ok(response)
 }
 
-fn verify_exchange_init(init: &ExchangeInit) {
+fn verify_exchange_init(init: &ExchangeInit) {}
 
-}
-
-async fn finalize_exchange(
-    token: String,
-    finish: &ExchangeFinish
-) -> Result<String> {
+async fn finalize_exchange(token: String, finish: &ExchangeFinish) -> Result<String> {
     let body = serde_json::to_value(&GenericSchemeBody {
         protocol_name: Protocol::Sigma,
         session_token: token,
-        payload: finish
+        payload: finish,
     })
     .unwrap();
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/protocols/sigma/exchange", get_server("adam_b")))
+        .post(&format!(
+            "{}/protocols/sigma/exchange",
+            get_server("adam_b")
+        ))
         .json(&body)
         .send()
         .await?;
@@ -81,26 +81,19 @@ async fn main() -> Result<()> {
 
     let g_xy = &exchange_init.server_commitment * &_commitment;
     let a_mac = base64::encode(&compute_mac(&g_xy, &public_key));
-    let sig = sign_commitments(
-        &secret_key,
-        &exchange_init.server_commitment,
-        &commitment,
-    );
+    let sig = sign_commitments(&secret_key, &exchange_init.server_commitment, &commitment);
 
     let msg = "Hello, there!".to_string();
     let finish = ExchangeFinish {
         a_mac,
         client_public_key: public_key,
         sig,
-        msg: msg.clone()
+        msg: msg.clone(),
     };
-
 
     let response = finalize_exchange(token, &finish).await?;
     let session_key = get_session_key(&g_xy);
-    let hasher = Sha3_512::new()
-        .chain(session_key.as_slice())
-        .chain(&msg);
+    let hasher = Sha3_512::new().chain(session_key.as_slice()).chain(&msg);
 
     let expected_message = base64::encode(hasher.result().as_slice());
     println!("{}", response == expected_message);

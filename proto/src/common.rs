@@ -1,24 +1,18 @@
 use std::fmt::Debug;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use mcl::traits::{RawSerializable, Formattable};
 use crate::protocols::Protocol;
+use mcl::traits::{Formattable, RawSerializable};
 
 pub mod serde_base64 {
 
     use super::*;
 
     use serde::{
+        de::{Deserializer, Error},
+        ser::{Error as SerError, Serializer},
         Deserialize,
-        de::{
-            Deserializer,
-            Error,
-        },
-        ser::{
-            Serializer,
-            Error as SerError
-        }
     };
 
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
@@ -27,9 +21,9 @@ pub mod serde_base64 {
         T: RawSerializable + Default,
     {
         let base64_str: &str = Deserialize::deserialize(deserializer)?;
-        from_base64(base64_str).map_err(|_| D::Error::custom("Couldn't deserialize MCL object from base64"))
+        from_base64(base64_str)
+            .map_err(|_| D::Error::custom("Couldn't deserialize MCL object from base64"))
     }
-
 
     pub fn serialize<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
     where
@@ -37,25 +31,20 @@ pub mod serde_base64 {
         S: Serializer,
         S::Error: SerError,
     {
-        let bytes = t.serialize_raw().map_err(|_| S::Error::custom("Couldn't serialize?"))?;
+        let bytes = t
+            .serialize_raw()
+            .map_err(|_| S::Error::custom("Couldn't serialize?"))?;
         let base64_str = base64::encode(&bytes);
         s.serialize_str(&base64_str)
     }
-
 }
 
 pub mod serde_mcl_default {
     use super::*;
 
     use serde::{
-        de::{
-            Deserializer,
-            Error as DeError,
-        },
-        ser::{
-            Serializer,
-            Error as SerError,
-        }
+        de::{Deserializer, Error as DeError},
+        ser::{Error as SerError, Serializer},
     };
 
     pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
@@ -67,14 +56,15 @@ pub mod serde_mcl_default {
         if raw_str.contains(' ') {
             raw_str = "1 ".to_string() + &raw_str.clone();
         }
-        from_mcl_default(&raw_str).map_err(|_| D::Error::custom("Couldn't deserialize from raw string"))
+        from_mcl_default(&raw_str)
+            .map_err(|_| D::Error::custom("Couldn't deserialize from raw string"))
     }
 
     pub fn serialize<T, S>(t: &T, s: S) -> Result<S::Ok, S::Error>
     where
         T: Formattable + ?Sized,
         S: Serializer,
-        S::Error: SerError
+        S::Error: SerError,
     {
         let serialized = to_mcl_default(t);
         if &serialized[..2] == "1 " {
@@ -125,7 +115,6 @@ pub fn to_string<T: Formattable>(t: &T) -> String {
     t_string
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenericSchemeBody<T>
 where
@@ -149,7 +138,7 @@ where
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenericResponse<T>
 where
-    T: Debug
+    T: Debug,
 {
     pub session_token: String,
     pub payload: T,

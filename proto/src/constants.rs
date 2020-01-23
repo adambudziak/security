@@ -20,10 +20,12 @@ pub fn default_g2() -> G2 {
     G2::from_str(DEFAULT_G2, Base::Dec)
 }
 
-pub fn get_server(key: &str) -> String
-{
+pub fn get_server(key: &str) -> String {
     json!({
         "adam_b": "http://localhost:42080",
         "rafal_r": "http://rrothenberger.thenflash:4000",
-    })[key].as_str().unwrap().to_string()
+    })[key]
+        .as_str()
+        .unwrap()
+        .to_string()
 }

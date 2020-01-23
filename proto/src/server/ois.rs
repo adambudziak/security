@@ -3,11 +3,9 @@ use rocket::response::status::NotFound;
 use rocket_contrib::databases::redis::Commands;
 use rocket_contrib::json::{Json, JsonValue};
 
-
-use crate::server::common::SessionDbConn;
-use crate::common::{InitSchemeBody, GenericResponse, GenericSchemeBody};
+use crate::common::{GenericResponse, GenericSchemeBody, InitSchemeBody};
 use crate::protocols::okamoto;
-
+use crate::server::common::SessionDbConn;
 
 pub fn init_okamoto(
     params: Json<InitSchemeBody<okamoto::InitParams>>,
@@ -36,7 +34,6 @@ pub fn init_okamoto(
     serde_json::to_value(&response).unwrap().into()
 }
 
-
 pub fn verify_okamoto(
     params: Json<GenericSchemeBody<okamoto::ProofParams>>,
     conn: SessionDbConn,
@@ -45,9 +42,9 @@ pub fn verify_okamoto(
 
     let id = params.session_token;
 
-    let session: String = conn.get(&id).map_err(|_| {
-        NotFound(format!("The session for {} doesn't exist or expired", id))
-    })?;
+    let session: String = conn
+        .get(&id)
+        .map_err(|_| NotFound(format!("The session for {} doesn't exist or expired", id)))?;
 
     conn.del::<_, ()>(&id).unwrap();
     let session: okamoto::Session = serde_json::from_str(&session).unwrap();

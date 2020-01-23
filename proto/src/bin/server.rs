@@ -12,14 +12,13 @@ use rocket_contrib::json::{Json, JsonValue};
 use proto::common::*;
 use proto::protocols::*;
 
-use proto::server::{sis, ois, sss, msis, blsss, sigma};
 use proto::server::common::SessionDbConn;
+use proto::server::{blsss, msis, ois, sigma, sis, sss};
 
 #[get("/protocols")]
 fn index() -> JsonValue {
     json!(["sis", "ois", "sss", "msis"])
 }
-
 
 #[post("/init", format = "json", data = "<params>")]
 fn init_schnorr(
@@ -45,7 +44,6 @@ pub fn init_okamoto(
     ois::init_okamoto(params, conn)
 }
 
-
 #[post("/verify", format = "json", data = "<params>")]
 pub fn verify_okamoto(
     params: Json<GenericSchemeBody<okamoto::ProofParams>>,
@@ -54,10 +52,8 @@ pub fn verify_okamoto(
     ois::verify_okamoto(params, conn)
 }
 
-#[post("/verify", format = "json", data ="<params>")]
-pub fn verify_sss(
-    params: Json<InitSchemeBody<schnorr::VerifyParams>>,
-) -> JsonValue {
+#[post("/verify", format = "json", data = "<params>")]
+pub fn verify_sss(params: Json<InitSchemeBody<schnorr::VerifyParams>>) -> JsonValue {
     sss::verify_sss(params.into_inner().payload)
 }
 
@@ -77,11 +73,8 @@ pub fn verify_mod_schnorr(
     msis::verify_mod_schnorr(params, conn)
 }
 
-
-#[post("/verify", format = "json", data ="<params>")]
-pub fn verify_blsss(
-    params: Json<InitSchemeBody<bls_ss::VerifyParams>>,
-) -> JsonValue {
+#[post("/verify", format = "json", data = "<params>")]
+pub fn verify_blsss(params: Json<InitSchemeBody<bls_ss::VerifyParams>>) -> JsonValue {
     blsss::verify_blsss(params.into_inner().payload)
 }
 
@@ -97,11 +90,9 @@ fn init_sigma(
 fn exchange_sigma(
     params: Json<GenericSchemeBody<sigma_ake::ExchangeFinish>>,
     conn: SessionDbConn,
-) -> Result<JsonValue, NotFound<String>>  {
+) -> Result<JsonValue, NotFound<String>> {
     sigma::exchange_sigma(params, conn)
 }
-
-
 
 fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
@@ -111,7 +102,10 @@ fn main() {
         .mount("/protocols/sis", routes![init_schnorr, verify_schnorr])
         .mount("/protocols/ois", routes![init_okamoto, verify_okamoto])
         .mount("/protocols/sss", routes![verify_sss])
-        .mount("/protocols/msis", routes![init_mod_schnorr, verify_mod_schnorr])
+        .mount(
+            "/protocols/msis",
+            routes![init_mod_schnorr, verify_mod_schnorr],
+        )
         .mount("/protocols/blsss", routes![verify_blsss])
         .mount("/protocols/sigma", routes![init_sigma, exchange_sigma])
         .attach(SessionDbConn::fairing())

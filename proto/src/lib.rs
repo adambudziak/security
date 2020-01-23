@@ -6,7 +6,8 @@ extern crate rocket_contrib;
 
 pub mod constants;
 
-#[macro_use] pub mod common;
+#[macro_use]
+pub mod common;
 pub mod protocols;
 
 pub mod server;
