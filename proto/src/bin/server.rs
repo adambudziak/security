@@ -14,6 +14,7 @@ use proto::protocols::*;
 
 use proto::server::common::SessionDbConn;
 use proto::server::{blsss, msis, ois, sigma, sis, sss};
+use proto::server::salsa::SalsaDigest;
 
 #[get("/protocols")]
 fn index() -> JsonValue {
@@ -94,11 +95,19 @@ fn exchange_sigma(
     sigma::exchange_sigma(params, conn)
 }
 
+
+#[post("/salsa", data = "<salsa_digest>")]
+fn salsa_encrypted_endpoint(
+    salsa_digest: SalsaDigest,
+) -> JsonValue {
+    json!({ "msg": salsa_digest.message })
+}
+
 fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
 
     rocket::ignite()
-        .mount("/", routes![index])
+        .mount("/", routes![index, salsa_encrypted_endpoint])
         .mount("/protocols/sis", routes![init_schnorr, verify_schnorr])
         .mount("/protocols/ois", routes![init_okamoto, verify_okamoto])
         .mount("/protocols/sss", routes![verify_sss])
