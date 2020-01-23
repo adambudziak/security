@@ -12,7 +12,7 @@ use rocket_contrib::json::{Json, JsonValue};
 use proto::common::*;
 use proto::protocols::*;
 
-use proto::server::{sis, ois, sss, msis, blsss};
+use proto::server::{sis, ois, sss, msis, blsss, sigma};
 use proto::server::common::SessionDbConn;
 
 #[get("/protocols")]
@@ -85,6 +85,23 @@ pub fn verify_blsss(
     blsss::verify_blsss(params.into_inner().payload)
 }
 
+#[post("/init", format = "json", data = "<params>")]
+fn init_sigma(
+    params: Json<InitSchemeBody<sigma_ake::InitParams>>,
+    conn: SessionDbConn,
+) -> JsonValue {
+    sigma::init_sigma(params, conn)
+}
+
+#[post("/exchange", format = "json", data = "<params>")]
+fn exchange_sigma(
+    params: Json<GenericSchemeBody<sigma_ake::ExchangeFinish>>,
+    conn: SessionDbConn,
+) -> Result<JsonValue, NotFound<String>>  {
+    sigma::exchange_sigma(params, conn)
+}
+
+
 
 fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
@@ -96,6 +113,7 @@ fn main() {
         .mount("/protocols/sss", routes![verify_sss])
         .mount("/protocols/msis", routes![init_mod_schnorr, verify_mod_schnorr])
         .mount("/protocols/blsss", routes![verify_blsss])
+        .mount("/protocols/sigma", routes![init_sigma, exchange_sigma])
         .attach(SessionDbConn::fairing())
         .launch();
 }
