@@ -4,20 +4,21 @@ use mcl::bn::*;
 use proto::common::*;
 use proto::constants::*;
 use proto::protocols::{
-    schnorr::{sign, VerifyParams},
+    goh_ss::{sign, VerifyParams},
     Protocol,
 };
 use std::collections::HashMap;
 
-async fn ask_for_verification(verify_params: VerifyParams) -> Result<bool> {
+
+async fn verify_signature(verify_params: VerifyParams) -> Result<bool> {
     let body = serde_json::to_value(&InitSchemeBody {
-        protocol_name: Protocol::Sss,
+        protocol_name: Protocol::Gjss,
         payload: verify_params,
     })
     .unwrap();
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/protocols/sss/verify", get_server("adam_b")))
+        .post(&format!("{}/protocols/gjss/verify", get_server("adam_b")))
         .json(&body)
         .send()
         .await?;
@@ -37,6 +38,6 @@ async fn main() -> Result<()> {
 
     let message = "Hello there!".to_string();
     let verify_params = sign(&secret_key, message);
-    ask_for_verification(verify_params).await?;
+    verify_signature(verify_params).await?;
     Ok(())
 }

@@ -14,7 +14,7 @@ use proto::common::*;
 use proto::protocols::*;
 
 use proto::server::common::SessionDbConn;
-use proto::server::{blsss, msis, ois, sigma, sis, sss};
+use proto::server::{blsss, msis, ois, sigma, sis, sss, gjss};
 use proto::server::salsa::SalsaDigest;
 use proto::common::salsa::SalsaMiddleware;
 
@@ -82,6 +82,12 @@ pub fn verify_blsss(params: Json<InitSchemeBody<bls_ss::VerifyParams>>) -> JsonV
     blsss::verify_blsss(params.into_inner().payload)
 }
 
+#[post("/verify", format = "json", data = "<params>")]
+pub fn verify_gjss(params: Json<InitSchemeBody<goh_ss::VerifyParams>>) -> JsonValue {
+    gjss::verify_gjss(params.into_inner().payload)
+}
+
+
 #[post("/init", format = "json", data = "<params>")]
 fn init_sigma(
     params: Json<InitSchemeBody<sigma_ake::InitParams>>,
@@ -133,6 +139,7 @@ fn main() {
             routes![init_mod_schnorr, verify_mod_schnorr],
         )
         .mount("/protocols/blsss", routes![verify_blsss])
+        .mount("/protocols/gjss", routes![verify_gjss])
         .mount("/protocols/sigma", routes![init_sigma, exchange_sigma])
         .attach(SessionDbConn::fairing())
         .launch();

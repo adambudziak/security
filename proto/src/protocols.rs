@@ -218,6 +218,7 @@ pub mod bls_ss {
     use super::*;
     use mcl::bn::{Fr, G1, G2, GT};
 
+
     use crate::{common::*, constants::*};
     
 
@@ -249,6 +250,87 @@ pub mod bls_ss {
         let e1 = GT::from_pairing(&g1, &params.signature);
         let e2 = GT::from_pairing(&params.pubkey, &g2);
         e1 == e2
+    }
+}
+
+pub mod goh_ss {
+    use super::*;
+    use mcl::bn::{Fr, G1};
+    use sha3::{Digest, Sha3_256};
+    use mcl::traits::Formattable;
+
+
+
+    use crate::{common::*, constants::*};
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct Signature {
+        #[serde(with = "serde_mcl_default")]
+        pub s: Fr,
+        #[serde(with = "serde_mcl_default")]
+        pub c: Fr,
+        #[serde(with = "serde_mcl_default")]
+        pub r: Fr,
+        #[serde(with = "serde_mcl_default")]
+        pub z: G1,
+        
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct VerifyParams {
+        #[serde(rename = "sigma")]
+        pub signature: Signature,
+        #[serde(with = "serde_mcl_default", rename = "A")]
+        pub pubkey: G1,
+        #[serde(rename = "msg")]
+        pub message: String
+    }
+
+    fn get_digest(message: &str, randomness: &Fr) -> Vec<u8> {
+        let mut digest = message.as_bytes().to_vec();
+        digest.append(&mut randomness.get_str(mcl::common::Base::Dec).as_bytes().to_vec());
+        digest
+    }
+
+    fn compute_hash(g: &G1, h: &G1, pubkey: &G1, z: &G1, u: &G1, v: &G1) -> Fr {
+        let ser = |p: &G1| p.get_str(mcl::common::Base::Dec);
+        let hasher = Sha3_256::new()
+            .chain(ser(g))
+            .chain(ser(h))
+            .chain(ser(pubkey))
+            .chain(ser(z))
+            .chain(ser(u))
+            .chain(ser(v));
+        from_bytes(hasher.result().as_slice()).unwrap()
+    }
+
+    pub fn sign(priv_key: &Fr, message: String) -> VerifyParams {
+        let g = default_g1();
+        let pubkey = &g * priv_key;
+        let r = Fr::from_csprng();
+        let h = G1::hash_and_map(&get_digest(&message, &r)).unwrap();
+        let z = &h * priv_key;
+        let k = Fr::from_csprng();
+        let u = &g * k;
+        let v = &h * k;
+        let c = compute_hash(&g, &h, &pubkey, &z, &u, &v);
+        let s = &k + &c * priv_key;
+        VerifyParams {
+            signature: Signature {
+                s, c, r, z
+            },
+            pubkey,
+            message
+        }
+    }
+
+    pub fn verify(params: &VerifyParams) -> bool {
+        let g = default_g1();
+        let h = G1::hash_and_map(&get_digest(params.message.as_str(), &params.signature.r)).unwrap();
+        let u = &g * params.signature.s + &params.pubkey * params.signature.c.neg();
+        let v = &h * params.signature.s + &params.signature.z * params.signature.c.neg();
+        let c_prim = compute_hash(&g, &h, &params.pubkey, &params.signature.z, &u, &v);
+        params.signature.c == c_prim
     }
 }
 
@@ -359,8 +441,9 @@ pub mod sigma_ake {
 pub enum Protocol {
     Sis,
     Ois,
-    Sss,
     Msis,
+    Sss,
     Blsss,
+    Gjss,
     Sigma,
 }
