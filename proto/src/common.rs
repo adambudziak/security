@@ -1,3 +1,5 @@
+pub mod salsa;
+
 use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};

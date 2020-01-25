@@ -6,6 +6,7 @@ extern crate rocket;
 extern crate rocket_contrib;
 
 use rocket::response::status::NotFound;
+use anyhow::{ Result, anyhow };
 
 use rocket_contrib::json::{Json, JsonValue};
 
@@ -15,6 +16,8 @@ use proto::protocols::*;
 use proto::server::common::SessionDbConn;
 use proto::server::{blsss, msis, ois, sigma, sis, sss};
 use proto::server::salsa::SalsaDigest;
+use proto::common::salsa::SalsaMiddleware;
+
 
 #[get("/protocols")]
 fn index() -> JsonValue {
@@ -25,16 +28,16 @@ fn index() -> JsonValue {
 fn init_schnorr(
     params: Json<InitSchemeBody<schnorr::InitParams>>,
     conn: SessionDbConn,
-) -> JsonValue {
-    sis::init_schnorr(params, conn)
+) -> Result<JsonValue> {
+    sis::init_schnorr(params.into_inner(), conn)
 }
 
 #[post("/verify", format = "json", data = "<params>")]
 pub fn verify_schnorr(
     params: Json<GenericSchemeBody<schnorr::ProofParams>>,
     conn: SessionDbConn,
-) -> Result<JsonValue, NotFound<String>> {
-    sis::verify_schnorr(params, conn)
+) -> Result<JsonValue> {
+    sis::verify_schnorr(params.into_inner(), conn)
 }
 
 #[post("/init", format = "json", data = "<params>")]
@@ -96,11 +99,25 @@ fn exchange_sigma(
 }
 
 
-#[post("/salsa", data = "<salsa_digest>")]
+#[post("/salsa/protocols/<protocol>/<stage>", data = "<salsa_digest>")]
 fn salsa_encrypted_endpoint(
+    protocol: String,
+    stage: String,
     salsa_digest: SalsaDigest,
-) -> JsonValue {
-    json!({ "msg": salsa_digest.message })
+    conn: SessionDbConn,
+) -> Result<String> {
+    match protocol.as_str() {
+        "sis" => match stage.as_str() {
+            "init" => sis::init_schnorr(serde_json::from_value(salsa_digest.value)?, conn),
+            "verify" => sis::verify_schnorr(serde_json::from_value(salsa_digest.value)?, conn),
+            _ => Err(anyhow!("Not found"))
+        },
+        _ => Err(anyhow!("Not found!"))
+    }.map(|value| {
+        let digest = serde_json::to_string(&value).unwrap();
+        let salsa = SalsaMiddleware::new().unwrap();
+        salsa.encrypt(&digest)
+    })
 }
 
 fn main() {
