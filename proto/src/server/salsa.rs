@@ -1,16 +1,15 @@
 use std::io::Read;
 
-use rocket::{Request, Data, Outcome::*};
 use rocket::data::{FromDataSimple, Outcome};
-use rocket::http::{Status};
+use rocket::http::Status;
+use rocket::{Data, Outcome::*, Request};
 use serde_json::Value;
-
 
 use crate::common::salsa::SalsaMiddleware;
 
 pub struct SalsaDigest {
-    pub value: Value
-} 
+    pub value: Value,
+}
 
 impl FromDataSimple for SalsaDigest {
     type Error = String;
@@ -19,7 +18,7 @@ impl FromDataSimple for SalsaDigest {
         let salsa = SalsaMiddleware::new();
         if let Err(_) = salsa {
             return Failure((Status::InternalServerError, "INTERNAL_ERROR".into()));
-        } 
+        }
         // let person_ct = ContentType::new("application", "x-person");
         // if req.content_type() != Some(&person_ct) {
         //     return Outcome::Forward(data);
@@ -29,7 +28,7 @@ impl FromDataSimple for SalsaDigest {
         if let Err(_) = data.open().read_to_string(&mut cipher) {
             return Failure((Status::InternalServerError, "INTERNAL_ERROR".into()));
         }
-        let message= salsa.unwrap().decrypt(&cipher);
+        let message = salsa.unwrap().decrypt(&cipher);
         if let Err(_) = message {
             return Failure((Status::UnprocessableEntity, "INVALID_DATA".into()));
         }
@@ -39,8 +38,6 @@ impl FromDataSimple for SalsaDigest {
         };
         let value: Value = value.unwrap();
 
-        Success(SalsaDigest {
-            value
-        })
+        Success(SalsaDigest { value })
     }
 }

@@ -5,21 +5,20 @@ extern crate rocket;
 #[macro_use]
 extern crate rocket_contrib;
 
+use anyhow::{anyhow, Result};
 use rocket::response::status::NotFound;
-use anyhow::{ Result, anyhow };
 
 use rocket_contrib::json::{Json, JsonValue};
 
 use proto::common::*;
 use proto::protocols::*;
 
-use proto::server::common::SessionDbConn;
-use proto::server::{blsss, msis, ois, sigma, sis, sss, gjss, naxos};
-use proto::server::salsa::SalsaDigest;
-use proto::common::salsa::SalsaMiddleware;
 use proto::common::chacha::ChachaMiddleware;
+use proto::common::salsa::SalsaMiddleware;
 use proto::server::chacha::ChachaDigest;
-
+use proto::server::common::SessionDbConn;
+use proto::server::salsa::SalsaDigest;
+use proto::server::{blsss, gjss, msis, naxos, ois, sigma, sis, sss};
 
 #[get("/protocols")]
 fn index() -> JsonValue {
@@ -89,7 +88,6 @@ pub fn verify_gjss(params: Json<InitSchemeBody<goh_ss::VerifyParams>>) -> JsonVa
     gjss::verify_gjss(params.into_inner().payload)
 }
 
-
 #[post("/init", format = "json", data = "<params>")]
 fn init_sigma(
     params: Json<InitSchemeBody<sigma_ake::InitParams>>,
@@ -119,7 +117,6 @@ fn get_naxos_pubkey(conn: SessionDbConn) -> Result<String> {
     Ok(to_base64(&naxos::get_or_create_naxos_keys(conn).public_key))
 }
 
-
 #[post("/salsa/protocols/<protocol>/<stage>", data = "<salsa_digest>")]
 fn salsa_encrypted_endpoint(
     protocol: String,
@@ -131,10 +128,11 @@ fn salsa_encrypted_endpoint(
         "sis" => match stage.as_str() {
             "init" => sis::init_schnorr(serde_json::from_value(salsa_digest.value)?, conn),
             "verify" => sis::verify_schnorr(serde_json::from_value(salsa_digest.value)?, conn),
-            _ => Err(anyhow!("Not found"))
+            _ => Err(anyhow!("Not found")),
         },
-        _ => Err(anyhow!("Not found!"))
-    }.map(|value| {
+        _ => Err(anyhow!("Not found!")),
+    }
+    .map(|value| {
         let digest = serde_json::to_string(&value).unwrap();
         let salsa = SalsaMiddleware::new().unwrap();
         salsa.encrypt(&digest)
@@ -152,10 +150,11 @@ fn chacha_encrypted_endpoint(
         "sis" => match stage.as_str() {
             "init" => sis::init_schnorr(serde_json::from_value(chacha_digest.value)?, conn),
             "verify" => sis::verify_schnorr(serde_json::from_value(chacha_digest.value)?, conn),
-            _ => Err(anyhow!("Not found"))
+            _ => Err(anyhow!("Not found")),
         },
-        _ => Err(anyhow!("Not found!"))
-    }.map(|value| {
+        _ => Err(anyhow!("Not found!")),
+    }
+    .map(|value| {
         let digest = serde_json::to_string(&value).unwrap();
         let salsa = ChachaMiddleware::new().unwrap();
         salsa.encrypt(&digest)
@@ -166,7 +165,10 @@ fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
 
     rocket::ignite()
-        .mount("/", routes![index, salsa_encrypted_endpoint, chacha_encrypted_endpoint])
+        .mount(
+            "/",
+            routes![index, salsa_encrypted_endpoint, chacha_encrypted_endpoint],
+        )
         .mount("/protocols/sis", routes![init_schnorr, verify_schnorr])
         .mount("/protocols/ois", routes![init_okamoto, verify_okamoto])
         .mount("/protocols/sss", routes![verify_sss])
@@ -176,7 +178,10 @@ fn main() {
         )
         .mount("/protocols/blsss", routes![verify_blsss])
         .mount("/protocols/gjss", routes![verify_gjss])
-        .mount("/protocols/naxos", routes![exchange_naxos, get_naxos_pubkey])
+        .mount(
+            "/protocols/naxos",
+            routes![exchange_naxos, get_naxos_pubkey],
+        )
         .mount("/protocols/sigma", routes![init_sigma, exchange_sigma])
         .attach(SessionDbConn::fairing())
         .launch();

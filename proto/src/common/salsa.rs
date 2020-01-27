@@ -1,16 +1,9 @@
-use anyhow::{ anyhow, Result };
+use anyhow::{anyhow, Result};
 
-use sodiumoxide::crypto::secretbox::xsalsa20poly1305::{
-    Key,
-    Nonce,
-    gen_nonce,
-    seal,
-    open
-};
+use sodiumoxide::crypto::secretbox::xsalsa20poly1305::{gen_nonce, open, seal, Key, Nonce};
 
 use std::fs::File;
 use std::io::Read;
-
 
 const NONCE_LEN: usize = 24;
 
@@ -19,12 +12,11 @@ pub struct SalsaMiddleware {
 }
 
 impl SalsaMiddleware {
-    
     pub fn new() -> Result<SalsaMiddleware> {
         let mut buffer = [0_u8; 32];
         let mut key_file = File::open("salsa_key.bin")?;
         key_file.read(&mut buffer)?;
-    
+
         let key = Key::from_slice(&buffer).ok_or(std::fmt::Error)?;
         Ok(SalsaMiddleware { key })
     }
@@ -45,11 +37,10 @@ impl SalsaMiddleware {
             return Err(anyhow!("INVALID_DATA"));
         }
         let nonce = self.get_nonce(&cipher)?;
-        let message = open(&cipher[NONCE_LEN..], &nonce, &self.key)
-            .map_err(|_| anyhow!("INVALID_DATA"))?;
+        let message =
+            open(&cipher[NONCE_LEN..], &nonce, &self.key).map_err(|_| anyhow!("INVALID_DATA"))?;
         Ok(String::from_utf8(message)?)
     }
-
 
     fn get_nonce(&self, buf: &[u8]) -> Result<Nonce> {
         let mut nonce = [0_u8; NONCE_LEN];

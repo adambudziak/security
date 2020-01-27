@@ -2,11 +2,10 @@ use anyhow::Result;
 
 use mcl::bn::*;
 
+use proto::common::salsa::SalsaMiddleware;
 use proto::common::*;
 use proto::constants::*;
 use proto::protocols::*;
-use proto::common::salsa::SalsaMiddleware;
-
 
 type SchnorrChallenge = GenericResponse<schnorr::ChallengeParams>;
 
@@ -23,7 +22,10 @@ async fn init_schnorr(pubkey: &G1, commitment: &G1) -> Result<SchnorrChallenge> 
     let digest = salsa.encrypt(&body);
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/salsa/protocols/sis/init", get_server("adam_b")))
+        .post(&format!(
+            "{}/salsa/protocols/sis/init",
+            get_server("adam_b")
+        ))
         .body(digest)
         .send()
         .await?;
@@ -45,7 +47,10 @@ async fn prove_schnorr(session_token: String, proof: Fr) -> Result<()> {
     let digest = salsa.encrypt(&body);
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/salsa/protocols/sis/verify", get_server("adam_b")))
+        .post(&format!(
+            "{}/salsa/protocols/sis/verify",
+            get_server("adam_b")
+        ))
         .body(digest)
         .send()
         .await?;
@@ -53,7 +58,8 @@ async fn prove_schnorr(session_token: String, proof: Fr) -> Result<()> {
     resp.error_for_status_ref()?;
 
     let response_cipher = resp.text().await?;
-    let resp: std::collections::HashMap<String, bool> = serde_json::from_str(&salsa.decrypt(&response_cipher).unwrap()).unwrap();
+    let resp: std::collections::HashMap<String, bool> =
+        serde_json::from_str(&salsa.decrypt(&response_cipher).unwrap()).unwrap();
 
     println!("{}", resp["verified"]);
     assert!(

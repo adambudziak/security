@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use rocket_contrib::databases::redis::Commands;
-use rocket_contrib::json::{JsonValue};
+use rocket_contrib::json::JsonValue;
 
 use crate::common::{GenericResponse, GenericSchemeBody, InitSchemeBody};
 use crate::protocols::schnorr;

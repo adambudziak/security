@@ -1,5 +1,5 @@
-pub mod salsa;
 pub mod chacha;
+pub mod salsa;
 
 use anyhow::{anyhow, Result};
 
@@ -120,15 +120,12 @@ pub fn to_string<T: Formattable>(t: &T) -> String {
     t_string
 }
 
-
 pub fn from_string<T: Formattable + Default>(mut raw_str: String) -> Result<T> {
     if raw_str.contains(' ') {
         raw_str = "1 ".to_string() + &raw_str.clone();
     }
-    from_mcl_default(&raw_str)
-        .map_err(|_| anyhow!("Couldn't deserialize from raw string"))
+    from_mcl_default(&raw_str).map_err(|_| anyhow!("Couldn't deserialize from raw string"))
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenericSchemeBody<T>

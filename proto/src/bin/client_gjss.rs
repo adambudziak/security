@@ -9,7 +9,6 @@ use proto::protocols::{
 };
 use std::collections::HashMap;
 
-
 async fn verify_signature(verify_params: VerifyParams) -> Result<bool> {
     let body = serde_json::to_value(&InitSchemeBody {
         protocol_name: Protocol::Gjss,

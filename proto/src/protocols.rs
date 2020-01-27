@@ -218,9 +218,7 @@ pub mod bls_ss {
     use super::*;
     use mcl::bn::{Fr, G1, G2, GT};
 
-
     use crate::{common::*, constants::*};
-    
 
     #[derive(Debug, Serialize, Deserialize)]
     pub struct VerifyParams {
@@ -256,10 +254,8 @@ pub mod bls_ss {
 pub mod goh_ss {
     use super::*;
     use mcl::bn::{Fr, G1};
-    use sha3::{Digest, Sha3_256};
     use mcl::traits::Formattable;
-
-
+    use sha3::{Digest, Sha3_256};
 
     use crate::{common::*, constants::*};
 
@@ -273,7 +269,6 @@ pub mod goh_ss {
         pub r: Fr,
         #[serde(with = "serde_mcl_default")]
         pub z: G1,
-        
     }
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -283,12 +278,17 @@ pub mod goh_ss {
         #[serde(with = "serde_mcl_default", rename = "A")]
         pub pubkey: G1,
         #[serde(rename = "msg")]
-        pub message: String
+        pub message: String,
     }
 
     fn get_digest(message: &str, randomness: &Fr) -> Vec<u8> {
         let mut digest = message.as_bytes().to_vec();
-        digest.append(&mut randomness.get_str(mcl::common::Base::Dec).as_bytes().to_vec());
+        digest.append(
+            &mut randomness
+                .get_str(mcl::common::Base::Dec)
+                .as_bytes()
+                .to_vec(),
+        );
         digest
     }
 
@@ -316,17 +316,16 @@ pub mod goh_ss {
         let c = compute_hash(&g, &h, &pubkey, &z, &u, &v);
         let s = &k + &c * priv_key;
         VerifyParams {
-            signature: Signature {
-                s, c, r, z
-            },
+            signature: Signature { s, c, r, z },
             pubkey,
-            message
+            message,
         }
     }
 
     pub fn verify(params: &VerifyParams) -> bool {
         let g = default_g1();
-        let h = G1::hash_and_map(&get_digest(params.message.as_str(), &params.signature.r)).unwrap();
+        let h =
+            G1::hash_and_map(&get_digest(params.message.as_str(), &params.signature.r)).unwrap();
         let u = &g * params.signature.s + &params.pubkey * params.signature.c.neg();
         let v = &h * params.signature.s + &params.signature.z * params.signature.c.neg();
         let c_prim = compute_hash(&g, &h, &params.pubkey, &params.signature.z, &u, &v);
@@ -452,7 +451,7 @@ pub mod naxos_ake {
         #[serde(with = "serde_mcl_default", rename = "A")]
         pub client_pubkey: G1,
         #[serde(rename = "msg")]
-        pub message: String
+        pub message: String,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -468,9 +467,8 @@ pub mod naxos_ake {
         #[serde(with = "serde_mcl_default")]
         pub public_key: G1,
         #[serde(with = "serde_mcl_default")]
-        pub secret_key: Fr
+        pub secret_key: Fr,
     }
-
 
     pub fn compute_h1(eph: &Fr, priv_key: &Fr) -> Fr {
         let hasher = Sha3_256::new()
@@ -489,7 +487,14 @@ pub mod naxos_ake {
         hasher.result().as_slice().to_vec()
     }
 
-    pub fn initiator_compute_key(server_pubkey: &G1, priv_key: &Fr, ephemeral: &Fr, responder_commitment: &G1, id_a: &str, id_b: &str) -> Vec<u8> {
+    pub fn initiator_compute_key(
+        server_pubkey: &G1,
+        priv_key: &Fr,
+        ephemeral: &Fr,
+        responder_commitment: &G1,
+        id_a: &str,
+        id_b: &str,
+    ) -> Vec<u8> {
         let h1 = compute_h1(&ephemeral, &priv_key);
         let p1 = responder_commitment * priv_key;
         let p2 = server_pubkey * h1;
@@ -497,7 +502,14 @@ pub mod naxos_ake {
         compute_h2(&p1, &p2, &p3, id_a, id_b)
     }
 
-    pub fn responder_compute_key(client_pubkey: &G1, priv_key: &Fr, ephemeral: &Fr, initiatior_commitment: &G1, id_a: &str, id_b: &str) -> Vec<u8> {
+    pub fn responder_compute_key(
+        client_pubkey: &G1,
+        priv_key: &Fr,
+        ephemeral: &Fr,
+        initiatior_commitment: &G1,
+        id_a: &str,
+        id_b: &str,
+    ) -> Vec<u8> {
         let h1 = compute_h1(&ephemeral, &priv_key);
         let p1 = client_pubkey * h1;
         let p2 = initiatior_commitment * priv_key;
@@ -506,9 +518,7 @@ pub mod naxos_ake {
     }
 
     pub fn compute_session_key_proof(session_key: &[u8], message: &str) -> String {
-        let hasher = Sha3_512::new()
-            .chain(session_key)
-            .chain(message);
+        let hasher = Sha3_512::new().chain(session_key).chain(message);
 
         base64::encode(hasher.result().as_slice())
     }
@@ -524,5 +534,5 @@ pub enum Protocol {
     Blsss,
     Gjss,
     Sigma,
-    Naxos
+    Naxos,
 }

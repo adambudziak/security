@@ -4,10 +4,11 @@ use mcl::bn::*;
 use proto::common::*;
 use proto::constants::*;
 use proto::protocols::{
-    naxos_ake::{InitRequest, InitResponse, initiator_compute_key, compute_session_key_proof, compute_h1},
+    naxos_ake::{
+        compute_h1, compute_session_key_proof, initiator_compute_key, InitRequest, InitResponse,
+    },
     Protocol,
 };
-
 
 async fn get_public_key() -> Result<G1> {
     let client = reqwest::Client::new();
@@ -30,7 +31,10 @@ async fn init_naxos(init: InitRequest) -> Result<InitResponse> {
     .unwrap();
     let client = reqwest::Client::new();
     let resp = client
-        .post(&format!("{}/protocols/naxos/exchange", get_server("adam_b")))
+        .post(&format!(
+            "{}/protocols/naxos/exchange",
+            get_server("adam_b")
+        ))
         .json(&body)
         .send()
         .await?;
@@ -59,9 +63,19 @@ async fn main() -> Result<()> {
         message: message.clone(),
     };
     let response = init_naxos(request).await?;
-    let session_key = initiator_compute_key(&server_pubkey, &secret_key, &ephemeral, &response.server_commitment, to_string(&pubkey).as_str(), to_string(&server_pubkey).as_str());
+    let session_key = initiator_compute_key(
+        &server_pubkey,
+        &secret_key,
+        &ephemeral,
+        &response.server_commitment,
+        to_string(&pubkey).as_str(),
+        to_string(&server_pubkey).as_str(),
+    );
 
-    println!("{}", response.message == compute_session_key_proof(&session_key, &message));
+    println!(
+        "{}",
+        response.message == compute_session_key_proof(&session_key, &message)
+    );
 
     Ok(())
 }
