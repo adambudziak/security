@@ -436,6 +436,84 @@ pub mod sigma_ake {
     }
 }
 
+pub mod naxos_ake {
+    use mcl::bn::{Fr, G1};
+    use mcl::traits::Formattable;
+
+    use super::*;
+
+    use crate::{common::*, constants::*};
+    use sha3::{Digest, Sha3_256, Sha3_512};
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct InitRequest {
+        #[serde(with = "serde_mcl_default", rename = "X")]
+        pub client_commitment: G1,
+        #[serde(with = "serde_mcl_default", rename = "A")]
+        pub client_pubkey: G1,
+        #[serde(rename = "msg")]
+        pub message: String
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct InitResponse {
+        #[serde(with = "serde_mcl_default", rename = "Y")]
+        pub server_commitment: G1,
+        #[serde(rename = "msg")]
+        pub message: String,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct Keys {
+        #[serde(with = "serde_mcl_default")]
+        pub public_key: G1,
+        #[serde(with = "serde_mcl_default")]
+        pub secret_key: Fr
+    }
+
+
+    pub fn compute_h1(eph: &Fr, priv_key: &Fr) -> Fr {
+        let hasher = Sha3_256::new()
+            .chain(to_string(eph))
+            .chain(to_string(priv_key));
+        from_bytes(hasher.result().as_slice()).unwrap()
+    }
+
+    pub fn compute_h2(p1: &G1, p2: &G1, p3: &G1, id_a: &str, id_b: &str) -> Vec<u8> {
+        let hasher = Sha3_512::new()
+            .chain(to_string(p1))
+            .chain(to_string(p2))
+            .chain(to_string(p3))
+            .chain(id_a)
+            .chain(id_b);
+        hasher.result().as_slice().to_vec()
+    }
+
+    pub fn initiator_compute_key(server_pubkey: &G1, priv_key: &Fr, ephemeral: &Fr, responder_commitment: &G1, id_a: &str, id_b: &str) -> Vec<u8> {
+        let h1 = compute_h1(&ephemeral, &priv_key);
+        let p1 = responder_commitment * priv_key;
+        let p2 = server_pubkey * h1;
+        let p3 = responder_commitment * h1;
+        compute_h2(&p1, &p2, &p3, id_a, id_b)
+    }
+
+    pub fn responder_compute_key(client_pubkey: &G1, priv_key: &Fr, ephemeral: &Fr, initiatior_commitment: &G1, id_a: &str, id_b: &str) -> Vec<u8> {
+        let h1 = compute_h1(&ephemeral, &priv_key);
+        let p1 = client_pubkey * h1;
+        let p2 = initiatior_commitment * priv_key;
+        let p3 = initiatior_commitment * h1;
+        compute_h2(&p1, &p2, &p3, id_a, id_b)
+    }
+
+    pub fn compute_session_key_proof(session_key: &[u8], message: &str) -> String {
+        let hasher = Sha3_512::new()
+            .chain(session_key)
+            .chain(message);
+
+        base64::encode(hasher.result().as_slice())
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Protocol {
@@ -446,4 +524,5 @@ pub enum Protocol {
     Blsss,
     Gjss,
     Sigma,
+    Naxos
 }

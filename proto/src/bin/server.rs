@@ -14,7 +14,7 @@ use proto::common::*;
 use proto::protocols::*;
 
 use proto::server::common::SessionDbConn;
-use proto::server::{blsss, msis, ois, sigma, sis, sss, gjss};
+use proto::server::{blsss, msis, ois, sigma, sis, sss, gjss, naxos};
 use proto::server::salsa::SalsaDigest;
 use proto::common::salsa::SalsaMiddleware;
 
@@ -104,6 +104,19 @@ fn exchange_sigma(
     sigma::exchange_sigma(params, conn)
 }
 
+#[post("/exchange", format = "json", data = "<params>")]
+fn exchange_naxos(
+    params: Json<InitSchemeBody<naxos_ake::InitRequest>>,
+    conn: SessionDbConn,
+) -> Result<JsonValue> {
+    naxos::init_naxos(params.into_inner(), conn)
+}
+
+#[get("/pkey")]
+fn get_naxos_pubkey(conn: SessionDbConn) -> Result<String> {
+    Ok(to_base64(&naxos::get_or_create_naxos_keys(conn).public_key))
+}
+
 
 #[post("/salsa/protocols/<protocol>/<stage>", data = "<salsa_digest>")]
 fn salsa_encrypted_endpoint(
@@ -140,6 +153,7 @@ fn main() {
         )
         .mount("/protocols/blsss", routes![verify_blsss])
         .mount("/protocols/gjss", routes![verify_gjss])
+        .mount("/protocols/naxos", routes![exchange_naxos, get_naxos_pubkey])
         .mount("/protocols/sigma", routes![init_sigma, exchange_sigma])
         .attach(SessionDbConn::fairing())
         .launch();
