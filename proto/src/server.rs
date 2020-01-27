@@ -6,5 +6,7 @@ pub mod sigma;
 pub mod sis;
 pub mod sss;
 pub mod gjss;
-pub mod salsa;
 pub mod naxos;
+
+pub mod salsa;
+pub mod chacha;

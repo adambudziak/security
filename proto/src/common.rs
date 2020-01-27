@@ -1,4 +1,5 @@
 pub mod salsa;
+pub mod chacha;
 
 use anyhow::{anyhow, Result};
 

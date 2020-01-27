@@ -17,6 +17,8 @@ use proto::server::common::SessionDbConn;
 use proto::server::{blsss, msis, ois, sigma, sis, sss, gjss, naxos};
 use proto::server::salsa::SalsaDigest;
 use proto::common::salsa::SalsaMiddleware;
+use proto::common::chacha::ChachaMiddleware;
+use proto::server::chacha::ChachaDigest;
 
 
 #[get("/protocols")]
@@ -139,11 +141,32 @@ fn salsa_encrypted_endpoint(
     })
 }
 
+#[post("/chacha/protocols/<protocol>/<stage>", data = "<chacha_digest>")]
+fn chacha_encrypted_endpoint(
+    protocol: String,
+    stage: String,
+    chacha_digest: ChachaDigest,
+    conn: SessionDbConn,
+) -> Result<String> {
+    match protocol.as_str() {
+        "sis" => match stage.as_str() {
+            "init" => sis::init_schnorr(serde_json::from_value(chacha_digest.value)?, conn),
+            "verify" => sis::verify_schnorr(serde_json::from_value(chacha_digest.value)?, conn),
+            _ => Err(anyhow!("Not found"))
+        },
+        _ => Err(anyhow!("Not found!"))
+    }.map(|value| {
+        let digest = serde_json::to_string(&value).unwrap();
+        let salsa = ChachaMiddleware::new().unwrap();
+        salsa.encrypt(&digest)
+    })
+}
+
 fn main() {
     mcl::init::init_curve(mcl::init::Curve::Bls12_381);
 
     rocket::ignite()
-        .mount("/", routes![index, salsa_encrypted_endpoint])
+        .mount("/", routes![index, salsa_encrypted_endpoint, chacha_encrypted_endpoint])
         .mount("/protocols/sis", routes![init_schnorr, verify_schnorr])
         .mount("/protocols/ois", routes![init_okamoto, verify_okamoto])
         .mount("/protocols/sss", routes![verify_sss])
