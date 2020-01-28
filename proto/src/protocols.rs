@@ -437,11 +437,11 @@ pub mod sigma_ake {
 
 pub mod naxos_ake {
     use mcl::bn::{Fr, G1};
-    use mcl::traits::Formattable;
+    
 
     use super::*;
 
-    use crate::{common::*, constants::*};
+    use crate::{common::*};
     use sha3::{Digest, Sha3_256, Sha3_512};
 
     #[derive(Debug, Serialize, Deserialize)]
